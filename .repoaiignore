@@ -1,0 +1,11 @@
+.gitignore
+.git
+.env
+venv
+.repoaiignore
+*/__pycache__
+.pytest_cache
+src/repoai.egg-info/
+LICENSE
+
+repoai_token_counts.json

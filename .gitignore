@@ -1,3 +1,11 @@
+.env
+.venv/
+repoai_token_counts.json
+context/*.md
+
+
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -25,6 +33,15 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+.pytest_cache
+src/_version.py
+src/repoai.egg-info/dependency_links.txt
+src/repoai.egg-info/entry_points.txt
+src/repoai.egg-info/PKG-INFO
+src/repoai.egg-info/requires.txt
+src/repoai.egg-info/SOURCES.txt
+src/repoai.egg-info/top_level.txt
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
