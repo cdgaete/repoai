@@ -55,10 +55,10 @@ class LLMExpertChat:
                     })
                 response = self.ai_client.get_chat_response("EXPERT_CHAT", self.messages)
 
-            self.messages.append({"role": "assistant", "content": response})
-            self.file_suggestions = self._parse_file_suggestions(response)
+            self.messages.append({"role": "assistant", "content": response["text"]})
+            self.file_suggestions = self._parse_file_suggestions(response["text"])
         
-        return response
+        return response["text"]
 
     def get_project_summary(self) -> str:
         return self.markdown_generator.generate_repo_content(Config.get_current_project_path(), False)
@@ -112,7 +112,7 @@ class LLMExpertChat:
                 raise ValueError(f"Invalid content type for suggestion: {suggestion}")
 
             if "content" in suggestion:
-                language, content = self.extract_main_code_block(suggestion["content"])
+                language, content = self.extract_main_code_block(suggestion["content"]) # This may fail with Markdown syntax that contains backticks
                 if content:
                     suggestion["content"] = content
         return suggestions
@@ -153,7 +153,7 @@ class LLMExpertChat:
         ]
         
         try:
-            response = self.ai_client.get_chat_response("EDIT_FILE", messages)
+            response = self.ai_client.get_chat_response("EDIT_FILE", messages)["text"]
         except ConnectionError as e:
             logger.error(f"Connection error while applying edit to file {full_path}: {str(e)}")
             raise ConnectionError(f"Unable to connect to the AI service. Please check your internet connection and try again.")

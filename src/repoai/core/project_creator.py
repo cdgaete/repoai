@@ -83,7 +83,7 @@ class ProjectCreator:
         preliminary_summary = []
         max_attempts = 6  # Prevent infinite loops
 
-        response = self.ai_client.get_chat_response("PROJECT_CREATOR", messages)
+        response = self.ai_client.get_chat_response("PROJECT_CREATOR", messages)["text"]
 
         if not response:
             logger.error("Failed to generate project summary using AI")
@@ -104,7 +104,7 @@ class ProjectCreator:
             logger.debug(f"Attempt {attempt + 1} to generate complete project summary")
             messages.append({"role": "user", "content": user_prompt})
             
-            response = self.ai_client.get_chat_response("PROJECT_CREATOR", messages)
+            response = self.ai_client.get_chat_response("PROJECT_CREATOR", messages)["text"]
 
             if not response:
                 logger.error("Failed to generate project summary using AI")
@@ -251,7 +251,7 @@ class ProjectCreator:
         else:
             messages.append({"role": "user", "content": user_input})
         
-        response = self.ai_client.get_chat_response("PROJECT_DESCRIPTION_CHAT", messages)
+        response = self.ai_client.get_chat_response("PROJECT_DESCRIPTION_CHAT", messages)["text"]
         
         if response:
             messages.append({"role": "assistant", "content": response})
@@ -287,7 +287,7 @@ class ProjectCreator:
         messages = [{"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}]
         
-        response = self.ai_client.get_chat_response("FORMAT_FILE_CONTENTS", messages)
+        response = self.ai_client.get_chat_response("FORMAT_FILE_CONTENTS", messages)["text"]
         
         if not response:
             logger.error("AI client returned empty response for file contents")

@@ -323,7 +323,7 @@ def render_settings():
             Config.set_task_model(task, st.session_state[task])
 
     st.sidebar.markdown("---")
-    st.sidebar.info("RepoAI - Powered by Anthropic's Claude")
+    st.sidebar.info("RepoAI - A repository assistant.\nIt helps you create and edit your projects with ease.\n\nMade with ❤️ to the open source community by [Carlos Gaete](https://github.com/cdgaete)\n\nContribute to the project on [GitHub](https://github.com/cdgaete/repoai)")
 
 def initialize_components():
     try:

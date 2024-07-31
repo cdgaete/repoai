@@ -22,6 +22,7 @@ dependencies = [
     "gitpython",
     "Streamlit",
     "appdirs",
+    "chardet",
 ]
 
 dynamic = ["version"]

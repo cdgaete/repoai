@@ -201,6 +201,7 @@ File paths must be relative to the root directory.
     EDIT_FILE_PROMPT: str = os.getenv("EDIT_FILE_PROMPT", """
 You are an expert on coding edition and software design. Provide the full content of a file based on the original file content and the suggested changes.
 If the suggested changes represent the complete new file, provide the suggested content only. You must not add any additional comments or explanations to the content.
+Return your response enclosed in triple backticks (```) and line breaks (`\n`) so: ```\n[content]\n```
 """)
     
     # File and Directory Configuration

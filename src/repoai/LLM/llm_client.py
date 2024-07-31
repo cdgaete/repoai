@@ -118,7 +118,7 @@ class LLMManager:
         self._log_response(task, model, messages, response["text"], system_prompt, response["input_tokens"], response["output_tokens"])
         if self.current_phase:
             Config.update_token_count(self.current_phase, model, response["input_tokens"], response["output_tokens"])
-        return response["text"]
+        return response
     
     def _log_response(self, task: str, model: str, messages: List[MessageType], response: Optional[str], system_prompt: str=None, input_tokens: int=0, output_tokens: int=0):
         log_entry = {
