@@ -21,6 +21,8 @@ from repoai.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
+logger = setup_logger(__name__)
+
 def sanitize_docker_tag(tag):
     # Convert to lowercase
     tag = tag.lower()
@@ -71,6 +73,7 @@ def initialize_session_state():
 
 def render_project_selection():
     if st.session_state.project_root_path:
+        st.sidebar.subheader("Project Selection")
         projects = [d for d in st.session_state.project_root_path.iterdir() if d.is_dir()]
         selected_project = st.sidebar.selectbox("Select a project", ["None Selected"] + [p.name for p in projects])
         
@@ -102,7 +105,7 @@ def render_project_selection():
                 
                 st.sidebar.success(f"Project '{selected_project}' selected.")
                 st.toast("All previous project data has been cleared.")
-                time.sleep(.5)
+                time.sleep(1.5)
                 st.rerun()  # Add this line to force a rerun after project selection
             return True
         else:
@@ -224,66 +227,92 @@ def render_token_counts():
 
 def render_repository_content():
     if st.session_state.current_project_path:
+        # Check for .repoaiignore file
+        ignore_file_path = st.session_state.current_project_path / Config.IGNORE_FILE
+        if not ignore_file_path.exists():
+            # Create an empty .repoaiignore file
+            ignore_file_path.touch()
+            st.sidebar.success(f"Created empty {Config.IGNORE_FILE} file.")
+
+        if "ignore_patterns" not in st.session_state:
+            st.session_state.ignore_patterns = MarkdownGenerator._read_ignore_file(st.session_state.current_project_path)
+
+        # Add Restart Conversation button
+        if st.sidebar.button("Restart Conversation"):
+            st.session_state.chat_messages = []
+            st.session_state.file_suggestions = []
+            st.session_state.llm_expert_chat = LLMExpertChat(st.session_state.ai_client, st.session_state.markdown_generator)
+            st.toast("Conversation restarted and project summary reloaded.")
+            time.sleep(1.5)
+            st.rerun()
+
         st.session_state.show_repo_content = st.sidebar.checkbox("Show Repository Content", value=st.session_state.get("show_repo_content", False))
         st.session_state.include_line_numbers = st.sidebar.checkbox("Include Line Numbers", value=st.session_state.get("include_line_numbers", False))
 
-        # Always show the chat interface
-        st.subheader("Chat with LLM Expert")
-        if st.session_state.llm_expert_chat is None:
-            st.session_state.llm_expert_chat = LLMExpertChat(st.session_state.ai_client, st.session_state.markdown_generator)
+        # Add download button for repository content with a unique key
+        repo_str = st.session_state.markdown_generator.generate_repo_content(
+            st.session_state.current_project_path,
+            st.session_state.include_line_numbers,
+        )
+        st.sidebar.download_button(
+            label="Download Repository Content",
+            data=repo_str,
+            file_name="repo_content.md",
+            mime="text/markdown",
+            key="download_repo_content_main"
+        )
 
-        for message in st.session_state.chat_messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+        st.sidebar.write("---")
 
-        if prompt := st.chat_input("Ask about your project or type 'show content' to view repository content"):
-            st.session_state.chat_messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
-
-            if prompt.lower() == 'show content':
-                st.session_state.show_repo_content = True
+        # Ignore patterns section
+        st.sidebar.subheader("Ignore Patterns")
+        st.sidebar.write(":orange[Save the changes before the chat session starts.]")
+        
+        # Display current ignore patterns
+        if st.session_state.ignore_patterns:
+            st.sidebar.text_area("Current ignore patterns:", value="\n".join(st.session_state.ignore_patterns), disabled=True, height=150)
+        else:
+            st.sidebar.info("No ignore patterns set.")
+        
+        # Add new ignore pattern
+        new_pattern = st.sidebar.text_input("Add new ignore pattern")
+        if st.sidebar.button("Add Pattern"):
+            if new_pattern and new_pattern not in st.session_state.ignore_patterns:
+                st.session_state.ignore_patterns.append(new_pattern)
+                st.sidebar.success(f"Added: {new_pattern}")
+            elif new_pattern in st.session_state.ignore_patterns:
+                st.sidebar.warning(f"{new_pattern} is already in the ignore list.")
             else:
-                with st.chat_message("assistant"):
-                    try:
-                        response = st.session_state.llm_expert_chat.chat(prompt, st.session_state.current_project_path.name)
-                        st.session_state.chat_messages.append({"role": "assistant", "content": response})
-                        st.markdown(response)
+                st.sidebar.warning("Please enter a valid pattern.")
+        
+        # Remove ignore pattern
+        if st.session_state.ignore_patterns:
+            pattern_to_remove = st.sidebar.selectbox("Select pattern to remove", [""] + st.session_state.ignore_patterns)
+            if st.sidebar.button("Remove Pattern"):
+                if pattern_to_remove:
+                    st.session_state.ignore_patterns.remove(pattern_to_remove)
+                    st.sidebar.success(f"Removed: {pattern_to_remove}")
+        
+        # Save ignore patterns
+        if st.sidebar.button("Save Ignore Patterns"):
+            with open(ignore_file_path, "w") as f:
+                for pattern in st.session_state.ignore_patterns:
+                    f.write(f"{pattern}\n")
+            st.sidebar.success(f"Ignore patterns saved to {Config.IGNORE_FILE}")
 
-                        # Update file suggestions
-                        st.session_state.file_suggestions = st.session_state.llm_expert_chat.get_file_suggestions()
-                    except ConnectionError as e:
-                        st.error(str(e))
-                    except OverloadedError as e:
-                        st.warning(str(e))
-                    except Exception as e:
-                        st.error(f"An error occurred: {str(e)}")
+        st.sidebar.write("---")
 
-        # Display file operation suggestions
-        if st.session_state.file_suggestions:
-            st.subheader("File Operation Suggestions")
-            selected_operations = st.multiselect(
-                "Select operations to apply",
-                options=[suggestion[0] for suggestion in st.session_state.file_suggestions],
-                format_func=lambda x: next(suggestion[1] for suggestion in st.session_state.file_suggestions if suggestion[0] == x)
-            )
+        render_token_counts()
 
-            if st.button("Apply Selected Operations"):
-                try:
-                    st.session_state.llm_expert_chat.apply_file_operations(selected_operations)
-                    st.toast("Selected operations applied successfully!")
-                    time.sleep(1.0)
-                    st.rerun()
-                except ConnectionError as e:
-                    st.error(str(e))
-                except OverloadedError as e:
-                    st.warning(str(e))
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
+        chat_edition_session()
 
         if st.session_state.show_repo_content:
             st.subheader("Repository Content")
-            repo_dict = st.session_state.markdown_generator.generate_repo_container(st.session_state.current_project_path, False)
+            repo_dict = st.session_state.markdown_generator.generate_repo_container(
+                st.session_state.current_project_path,
+                False,
+                st.session_state.ignore_patterns
+            )
             
             with st.expander("Repository Structure"):
                 st.code(repo_dict["__tree__"]["content"], language="markdown")
@@ -300,17 +329,6 @@ def render_repository_content():
                     st.markdown(file_content, unsafe_allow_html=True)
                 else:
                     st.code(file_content, language=file_language, line_numbers=st.session_state.include_line_numbers)
-
-        # Add download button for repository content with a unique key
-        repo_str = st.session_state.markdown_generator.generate_repo_content(st.session_state.current_project_path, st.session_state.include_line_numbers)
-        st.sidebar.download_button(
-            label="Download Repository Content",
-            data=repo_str,
-            file_name="repo_content.md",
-            mime="text/markdown",
-            key="download_repo_content_main"
-        )
-        render_token_counts()
     else:
         st.info("Please select a project to view its content and chat with the LLM expert.")
 
@@ -377,12 +395,16 @@ def render_sidebar():
                 st.session_state.initialized = True
                 st.rerun()
 
-    st.sidebar.header("Project Creation")
+    st.sidebar.write("---")
+
+    st.sidebar.subheader("Project Creation")
     project_creation_options = ["Create Empty Project", "Describe Project"]
     st.session_state.project_creation_mode = st.sidebar.selectbox("Select Project Creation Mode", project_creation_options)
 
     if st.sidebar.button("Start Project Creation"):
         st.session_state.create_project_mode = True
+
+    st.sidebar.write("---")
 
 def find_docker_compose_files(project_path):
     compose_files = list(project_path.glob('docker-compose*.yml'))
@@ -446,3 +468,52 @@ def rebuild_and_rerun_docker_compose(file_name):
             st.sidebar.error(f"Error rebuilding and rerunning Docker Compose: {up_result.stderr}")
     except Exception as e:
         st.sidebar.error(f"An error occurred: {str(e)}")
+
+def chat_edition_session():
+    st.info("Avoid long conversations; sometimes it's best to restart the chat to provide a fresh view of the project's state. The chat has a history, but the AI can get confused with longer conversations.")
+    # Always show the chat interface
+    st.subheader("Chat with the AI assistant")
+    if st.session_state.llm_expert_chat is None:
+        st.session_state.llm_expert_chat = LLMExpertChat(st.session_state.ai_client, st.session_state.markdown_generator)
+
+    for message in st.session_state.chat_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input(f"Ask about '{st.session_state.current_project}' project content or request changes/suggestions/improvements."):
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        if prompt.lower() == 'show content':
+            st.session_state.show_repo_content = True
+        else:
+            with st.chat_message("assistant"):
+                try:
+                    response = st.session_state.llm_expert_chat.chat(prompt, st.session_state.current_project_path.name)
+                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    st.markdown(response)
+
+                    # Update file suggestions
+                    st.session_state.file_suggestions = st.session_state.llm_expert_chat.get_file_suggestions()
+                except ConnectionError as e:
+                    st.error(str(e))
+                except OverloadedError as e:
+                    st.warning(str(e))
+                except Exception as e:
+                    st.error(f"An error occurred: {str(e)}")
+
+    # Display file operation suggestions
+    if st.session_state.file_suggestions:
+        st.subheader("File Operation Suggestions")
+        selected_operations = st.multiselect(
+            "Select operations to apply",
+            options=[suggestion[0] for suggestion in st.session_state.file_suggestions],
+            format_func=lambda x: next(suggestion[1] for suggestion in st.session_state.file_suggestions if suggestion[0] == x)
+        )
+
+        if st.button("Apply Selected Operations"):
+            st.session_state.llm_expert_chat.apply_file_operations(selected_operations)
+            st.toast("Selected operations applied successfully!")
+            time.sleep(1.0)
+            st.rerun()

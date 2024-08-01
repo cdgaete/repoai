@@ -1,10 +1,11 @@
 # src/repoai/utils/markdown_generator.py
 
 import streamlit as st
-from pathlib import Path
 import fnmatch
 import mimetypes
 import os
+from pathlib import Path
+from typing import List
 from ..utils.treenode import FileSystemTree
 from ..config import Config
 from ..utils.text_file import is_text_file
@@ -12,11 +13,13 @@ from ..utils.text_file import is_text_file
 class MarkdownGenerator:
     @staticmethod
     @st.cache_data(ttl=0)
-    def generate_repo_content(project_path: Path, include_line_numbers: bool = True):
+    def generate_repo_content(project_path: Path, include_line_numbers: bool = True, ignore_patterns: List[str] = None):
         if not project_path:
             return "# No project selected\n\nPlease create or select a project to view its contents."
         
-        ignore_patterns = MarkdownGenerator._read_ignore_file(project_path)
+        if ignore_patterns is None:
+            ignore_patterns = MarkdownGenerator._read_ignore_file(project_path)
+        
         files = MarkdownGenerator._get_files(project_path, ignore_patterns)
         
         content = "# Repository Contents\n\n"
@@ -27,16 +30,13 @@ class MarkdownGenerator:
         return content
     
     @staticmethod
-    def _is_text_type(mime_type: str, full_path: Path):
-        return (mime_type and mime_type.startswith('text/')) or (mime_type in ['application/json', 'application/xml', 'image/svg+xml']) or is_text_file(full_path)
-
-    @staticmethod
     @st.cache_data(ttl=0)
-    def generate_repo_container(project_path: Path, include_line_numbers: bool = False):
+    def generate_repo_container(project_path: Path, include_line_numbers: bool = False, ignore_patterns: List[str] = None):
         if not project_path:
             return {}
         container = {}
-        ignore_patterns = MarkdownGenerator._read_ignore_file(project_path)
+        if ignore_patterns is None:
+            ignore_patterns = MarkdownGenerator._read_ignore_file(project_path)
         files = MarkdownGenerator._get_files(project_path, ignore_patterns)
         tree = MarkdownGenerator._generate_folder_tree(project_path, ignore_patterns)
         container["__tree__"] = {"content":tree, "language": "markdown"}
@@ -52,6 +52,10 @@ class MarkdownGenerator:
                     content = f"\n\n# Content not displayed: {mime_type or 'Unknown'} file\n\n"
                     container[str(file_path)] = {"content":content, "language": "python"}
         return container
+                    
+    @staticmethod
+    def _is_text_type(mime_type: str, full_path: Path):
+        return (mime_type and mime_type.startswith('text/')) or (mime_type in ['application/json', 'application/xml', 'image/svg+xml']) or is_text_file(full_path)
 
     @staticmethod
     def _read_ignore_file(project_path: Path):

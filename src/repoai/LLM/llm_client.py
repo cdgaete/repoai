@@ -1,3 +1,5 @@
+# src/repoai/LLM/llm_client.py
+
 import json
 import os
 from typing import List, Dict, Optional, Any
@@ -8,6 +10,9 @@ from .tool_handler import ToolHandler
 from .llm_provider import LLMProvider, MessageType
 from .providers.anthropic_provider import AnthropicProvider
 from .providers.ollama_provider import OllamaProvider
+from .providers.openai_provider import OpenAIProvider
+from .providers.fireworks_provider import FireworksProvider
+from .providers.groq_provider import GroqProvider
 from ..config import Config
 from ..utils.logger import setup_logger
 from ..utils.context_managers import use_tools
@@ -38,6 +43,12 @@ class LLMManager:
             return AnthropicProvider(api_key, api_host)
         elif provider == "ollama":
             return OllamaProvider(api_key, api_host)
+        elif provider == "openai":
+            return OpenAIProvider(api_key, api_host)
+        elif provider == "fireworks":
+            return FireworksProvider(api_key, api_host)
+        elif provider == "groq":
+            return GroqProvider(api_key, api_host)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
         

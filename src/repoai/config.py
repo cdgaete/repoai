@@ -13,9 +13,15 @@ class Config:
     load_dotenv()
 
     # API Configuration
-    ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
+    ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY", "Any_API_Key")
     OLLAMA_API_KEY: Optional[str] = os.getenv("OLLAMA_API_KEY", "Any_API_Key")
     OLLAMA_API_HOST: str = os.getenv("OLLAMA_API_HOST", "http://localhost:11434")
+    OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", "Any_API_Key")
+    OPENAI_API_HOST: Optional[str] = os.getenv("OPENAI_API_HOST", "https://api.openai.com/v1")
+    FIREWORKS_API_KEY: Optional[str] = os.getenv("FIREWORKS_API_KEY", "Any_API_Key")
+    FIREWORKS_API_HOST: Optional[str] = os.getenv("FIREWORKS_API_HOST", "https://api.fireworks.ai/inference/v1")
+    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY", "Any_API_Key")
+    GROQ_API_HOST: Optional[str] = os.getenv("GROQ_API_HOST", "https://api.groq.com/openai/v1")
 
     # File and text processing
     SAMPLE_SIZE_FOR_TEXT_DETECTION: int = 1024
@@ -34,8 +40,15 @@ class Config:
     MODELS_PROVIDER_MAPPING: Dict[str, str] = {
         "claude-3-haiku-20240307": "anthropic",
         "claude-3-5-sonnet-20240620": "anthropic",
-        "llama3.1:latest": "ollama",  # Add Ollama model
+        "llama3.1:latest": "ollama",
         "llama3-groq-tool-use:latest": "ollama",
+        "gpt-4o-2024-05-13": "openai",
+        "gpt-4o-mini-2024-07-18": "openai",
+        "gpt-4-turbo-2024-04-09": "openai",
+        "llama-3.1-405b-reasoning": "groq",
+        "llama3-groq-70b-8192-tool-use-preview": "groq",
+        "accounts/fireworks/models/llama-v3p1-405b-instruct": "fireworks",
+        "accounts/fireworks/models/firefunction-v2": "fireworks",
     }
 
     MODELS_CONFIG_MAPPING: Dict[str, Dict[str, Any]] = {
@@ -70,16 +83,68 @@ class Config:
             timeout=600.0,
         ),
         "llama3.1:latest": dict(
-            max_tokens=4000,
-            temperature=0.7,
-            top_p=0.9,
+            format="",
             stream=False,
         ),
         "llama3-groq-tool-use:latest": dict(
-            max_tokens=4000,
-            temperature=0.7,
-            top_p=0.9,
+            format="",
             stream=False,
+        ),
+        "gpt-4o-2024-05-13": dict(
+            max_tokens=4000,
+            temperature=0.3,
+            top_p=0.1,
+            stream=False,
+            tools=None,
+            tool_choice={"type": "auto"},
+        ),
+        "gpt-4o-mini-2024-07-18": dict(
+            max_tokens=4000,
+            temperature=0.3,
+            top_p=0.1,
+            stream=False,
+            tools=None,
+            tool_choice={"type": "auto"},
+        ),
+        "gpt-4-turbo-2024-04-09": dict(
+            max_tokens=4000,
+            temperature=0.3,
+            top_p=0.1,
+            stream=False,
+            tools=None,
+            tool_choice={"type": "auto"},
+        ),
+        "llama-3.1-405b-reasoning": dict(
+            max_tokens=4000,
+            temperature=0.3,
+            top_p=0.1,
+            stream=False,
+            tools=None,
+            tool_choice={"type": "auto"},
+        ),
+        "llama3-groq-70b-8192-tool-use-preview": dict(
+            max_tokens=4000,
+            temperature=0.3,
+            top_p=0.1,
+            stream=False,
+            tools=None,
+            tool_choice={"type": "auto"},
+        ),
+        "accounts/fireworks/models/llama-v3p1-405b-instruct": dict(
+            max_tokens=4000,
+            temperature=0.3,
+            top_p=0.1,
+            stream=False,
+            tools=None,
+            tool_choice={"type": "auto"},
+        ),
+        "accounts/fireworks/models/firefunction-v2": dict(
+            max_tokens=4000,
+            temperature=0.3,
+            top_p=0.1,
+            stream=False,
+            tools=None,
+            tool_choice={"type": "auto"},
         ),
     }
 
@@ -195,7 +260,7 @@ MOVE_FILE: [source_file_path]:[destination_file_path]
 
 You can suggest multiple file operations in one response. Always provide a clear explanation of your suggestions before listing the file operations.
 Remember that edit and create operations must end with END_EDIT or END_CREATE respectively.
-File paths must be relative to the root directory.
+File paths must be relative to the root directory. If there is a folder called 'context' in the root directory, this do not belong to the project, but contains useful information for the project.
 """)
     
     EDIT_FILE_PROMPT: str = os.getenv("EDIT_FILE_PROMPT", """
@@ -426,6 +491,12 @@ __pycache__/
             return cls.ANTHROPIC_API_KEY
         elif provider == "ollama":
             return cls.OLLAMA_API_KEY
+        elif provider == "openai":
+            return cls.OPENAI_API_KEY
+        elif provider == "fireworks":
+            return cls.FIREWORKS_API_KEY
+        elif provider == "groq":
+            return cls.GROQ_API_KEY
         else:
             raise ValueError(f"Unsupported provider: {provider}")
         
@@ -435,6 +506,12 @@ __pycache__/
             return None
         elif provider == "ollama":
             return cls.OLLAMA_API_HOST
+        elif provider == "openai":
+            return cls.OPENAI_API_HOST
+        elif provider == "fireworks":
+            return cls.FIREWORKS_API_HOST
+        elif provider == "groq":
+            return cls.GROQ_API_HOST
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     
