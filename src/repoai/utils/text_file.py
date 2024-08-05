@@ -1,8 +1,10 @@
+# src/repoai/utils/text_file.py
+
 import string
 import chardet
-from ..config import Config
+from .config_manager import config_manager
 
-def is_text_file(filepath, sample_size=Config.SAMPLE_SIZE_FOR_TEXT_DETECTION):
+def is_text_file(filepath, sample_size=None):
     """
     Check if a file is likely to be a text file.
     
@@ -10,6 +12,9 @@ def is_text_file(filepath, sample_size=Config.SAMPLE_SIZE_FOR_TEXT_DETECTION):
     :param sample_size: Number of bytes to check (default from Config)
     :return: True if the file is likely to be text, False otherwise
     """
+    if sample_size is None:
+        sample_size = config_manager.get('SAMPLE_SIZE_FOR_TEXT_DETECTION', 1024)
+
     try:
         with open(filepath, 'rb') as file:
             raw_data = file.read(sample_size)
@@ -37,13 +42,13 @@ def is_text_file(filepath, sample_size=Config.SAMPLE_SIZE_FOR_TEXT_DETECTION):
         if result['encoding'] is not None:
             confidence = result['confidence']
             # Consider it text if confidence is high
-            if confidence > Config.CHARDET_CONFIDENCE_THRESHOLD:
+            if confidence > config_manager.get('CHARDET_CONFIDENCE_THRESHOLD', 0.8):
                 return True
         
         # Check the percentage of printable characters
         printable = set(bytes(string.printable, 'ascii'))
         printable_ratio = sum(byte in printable for byte in raw_data) / len(raw_data)
-        if printable_ratio > Config.PRINTABLE_RATIO_THRESHOLD:
+        if printable_ratio > config_manager.get('PRINTABLE_RATIO_THRESHOLD', 0.7):
             return True
         
         return False

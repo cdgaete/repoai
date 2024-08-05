@@ -5,6 +5,7 @@ import re
 import json
 import shutil
 from typing import List, Dict, Optional, Tuple
+from pathlib import Path
 from ..config import Config
 from ..LLM.llm_client import LLMManager
 from ..LLM.tool_handler import ToolHandler
@@ -12,21 +13,26 @@ from ..utils.markdown_generator import MarkdownGenerator
 from ..utils.git_operations import GitOperations
 from ..utils.exceptions import OverloadedError, ConnectionError, FileOperationError, FileCreateError
 from ..utils.logger import setup_logger
+from ..utils.config_manager import config_manager
 
 logger = setup_logger(__name__)
 
-
 class LLMExpertChat:
-    def __init__(self, ai_client: LLMManager, markdown_generator: MarkdownGenerator):
+    def __init__(self, ai_client: LLMManager, markdown_generator: MarkdownGenerator, git_operations: GitOperations, project_path: str | Path):
+        
+        if isinstance(project_path, str):
+            project_path = Path(project_path)
+        Config.set_current_project(project_path)
+
+        self.project_path = project_path
         self.ai_client = ai_client
         self.markdown_generator = markdown_generator
-        self.git_operations = GitOperations()
+        self.git_operations = git_operations
         self.messages: List[Dict[str, str]] = []
         self.file_suggestions: List[Dict[str, str]] = []
         self.tool_handler = ToolHandler()
 
-    def chat(self, user_input: str, project_name: str) -> str:
-        self.ai_client.set_current_project(project_name)
+    def chat(self, user_input: str) -> str:
         self.ai_client.set_current_phase("edition")
 
         project_summary = self.get_project_summary()
@@ -61,7 +67,7 @@ class LLMExpertChat:
         return response["text"]
 
     def get_project_summary(self) -> str:
-        return self.markdown_generator.generate_repo_content(Config.get_current_project_path(), False)
+        return self.markdown_generator.generate_repo_content(self.project_path, False)
 
     def _parse_file_suggestions(self, response: str) -> List[Dict[str, str]]:
         suggestions = []
@@ -112,7 +118,7 @@ class LLMExpertChat:
                 raise ValueError(f"Invalid content type for suggestion: {suggestion}")
 
             if "content" in suggestion:
-                language, content = self.extract_main_code_block(suggestion["content"]) # This may fail with Markdown syntax that contains backticks
+                language, content = self.extract_main_code_block(suggestion["content"])
                 if content:
                     suggestion["content"] = content
         return suggestions
@@ -136,7 +142,7 @@ class LLMExpertChat:
                     self.apply_file_create(suggestion['file'], suggestion['content'])
 
     def apply_file_edit(self, file_path: str, new_content: str) -> None:
-        full_path = Config.get_current_project_path() / file_path
+        full_path = self.project_path / file_path
         logger.info(f"Attempting to apply edit to file: {full_path}")
 
         try:
@@ -198,7 +204,7 @@ class LLMExpertChat:
             logger.error(f"Received None content for file: {file_path}")
             return  # Early return to prevent the error
 
-        full_path = Config.get_current_project_path() / file_path
+        full_path = self.project_path / file_path
 
         logger.info(f"Attempting to create file: {full_path}")
         
@@ -218,7 +224,7 @@ class LLMExpertChat:
             raise FileCreateError(f"Unexpected error while creating file {file_path}: {str(e)}")
 
     def apply_file_delete(self, file_path: str) -> None:
-        full_path = Config.get_current_project_path() / file_path
+        full_path = self.project_path / file_path
         logger.info(f"Attempting to delete file: {full_path}")
         
         try:
@@ -242,8 +248,8 @@ class LLMExpertChat:
             raise
 
     def apply_file_move(self, source_path: str, destination_path: str) -> None:
-        full_source_path = Config.get_current_project_path() / source_path
-        full_destination_path = Config.get_current_project_path() / destination_path
+        full_source_path = self.project_path / source_path
+        full_destination_path = self.project_path / destination_path
         logger.info(f"Attempting to move file from {full_source_path} to {full_destination_path}")
         
         try:

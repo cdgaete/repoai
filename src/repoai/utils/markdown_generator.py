@@ -6,9 +6,10 @@ import mimetypes
 import os
 from pathlib import Path
 from typing import List
-from ..utils.treenode import FileSystemTree
+from .treenode import FileSystemTree
 from ..config import Config
-from ..utils.text_file import is_text_file
+from .config_manager import config_manager
+from .text_file import is_text_file
 
 class MarkdownGenerator:
     @staticmethod
@@ -59,12 +60,12 @@ class MarkdownGenerator:
 
     @staticmethod
     def _read_ignore_file(project_path: Path):
-        ignore_file = project_path / Config.IGNORE_FILE
+        ignore_file = Config.get_ignore_file_path(project_path)
         if not ignore_file.exists():
-            return Config.DEFAULT_IGNORE_PATTERNS
+            return config_manager.get('DEFAULT_IGNORE_PATTERNS', [])
         with open(ignore_file, "r") as f:
             patterns = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-        return patterns + Config.DEFAULT_IGNORE_PATTERNS
+        return patterns
 
     @staticmethod
     def _get_files(project_path: Path, ignore_patterns: list):
@@ -87,7 +88,7 @@ class MarkdownGenerator:
         file_system_tree = FileSystemTree.generate(
             project_path,
             criteria=custom_criteria,
-            ignore_file=project_path / Config.IGNORE_FILE
+            ignore_file=project_path / '.repoai' / config_manager.get('IGNORE_FILE', '.repoaiignore')
         )
 
         for node in file_system_tree:
@@ -131,7 +132,7 @@ class MarkdownGenerator:
     @staticmethod
     def _get_language_identifier(file_path: Path):
         extension = file_path.suffix.lower()
-        return Config.FILE_EXTENSION_TO_LANGUAGE.get(extension, "")
+        return config_manager.get('FILE_EXTENSION_TO_LANGUAGE', {}).get(extension, "")
 
     @staticmethod
     def _should_ignore(path: Path, project_path: Path, ignore_patterns: list):

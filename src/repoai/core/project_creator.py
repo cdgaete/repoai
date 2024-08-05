@@ -1,6 +1,6 @@
 # src/repoai/core/project_creator.py
 
-import os
+import json
 import re
 import shutil
 from pathlib import Path
@@ -9,30 +9,29 @@ from ..config import Config
 from ..LLM.llm_client import LLMManager
 from ..utils.git_operations import GitOperations
 from ..utils.logger import setup_logger
+from ..utils.config_manager import config_manager
 
 logger = setup_logger(__name__)
 
 class ProjectCreator:
-    def __init__(self, ai_client: LLMManager):
+    def __init__(self, ai_client: LLMManager, git_operations: GitOperations):
         self.ai_client = ai_client
-        self.git_operations = GitOperations()
+        self.git_operations = git_operations
         self.current_prompt = ""
 
-    def create_empty_project(self, project_name: str) -> Path:
-        logger.info(f"Creating empty project: {project_name}")
-        
-        project_path = self._get_project_path(project_name)
-        
+    def create_empty_project(self, project_path: str | Path) -> Path:
+        if isinstance(project_path, str):
+            project_path = Path(project_path)
+
+        logger.info(f"Creating empty project: {project_path.name}")
+    
         try:
-            self._create_project_directory(project_path)
-            
-            # Set the CURRENT_PROJECT_PATH in Config
-            Config.set_current_project(project_name)
+            Config.set_current_project(project_path)
+            self._initialize_git_repo()
             
             self._create_gitignore(project_path)
             self._create_repoaiignore(project_path)
             self._create_env_file(project_path)
-            self._initialize_git_repo()
 
             logger.info(f"Empty project creation completed successfully at: {project_path}")
             return project_path
@@ -41,18 +40,17 @@ class ProjectCreator:
             self._cleanup_failed_project(project_path)
             raise
 
-    def create_project_from_description(self, project_name: str, project_description: str) -> Path:
+    def create_project_from_description(self, project_path: str | Path, project_description: str) -> Path:
+        if isinstance(project_path, str):
+            project_path = Path(project_path)
+        project_name = project_path.name
+
         logger.info(f"Creating project from description: {project_name}")
         
-        project_path = self._get_project_path(project_name)
-        
         try:
-            # Create project directory and initialize git repo with empty commit
-            self._create_project_directory(project_path)
             Config.set_current_project(project_name)
             self._initialize_git_repo()
 
-            self.ai_client.set_current_project(project_name)
             self.ai_client.set_current_phase("creation")
 
             project_summary = self._generate_complete_project_summary(project_description)
@@ -81,7 +79,7 @@ class ProjectCreator:
 
         messages = [{"role": "system", "content": wrapped_system_prompt},{"role": "user", "content": user_prompt}]
         preliminary_summary = []
-        max_attempts = 6  # Prevent infinite loops
+        max_attempts = config_manager.get('MAX_SUMMARY_ATTEMPTS', 6)
 
         response = self.ai_client.get_chat_response("PROJECT_CREATOR", messages)["text"]
 
@@ -150,17 +148,6 @@ class ProjectCreator:
         else:
             return True, len(response)
 
-    def _get_project_path(self, project_name: str) -> Path:
-        if Config.PROJECT_ROOT_PATH is None:
-            raise ValueError("Project root path is not set")
-        return Config.PROJECT_ROOT_PATH / project_name
-
-    def _create_project_directory(self, project_path: Path):
-        try:
-            project_path.mkdir(parents=True, exist_ok=False)
-        except FileExistsError:
-            raise ValueError(f"Project directory already exists: {project_path}")
-
     def _cleanup_failed_project(self, project_path: Path):
         if project_path.exists():
             shutil.rmtree(project_path)
@@ -193,7 +180,7 @@ class ProjectCreator:
     
     def _extract_project_content(self, root_dir: str, project_path: Path, files: List[str], project_summary: str) -> Dict[str, str]:
         content_dict = {}
-        batch_size = 3  # Process 5 files at a time, adjust as needed
+        batch_size = config_manager.get('FILE_BATCH_SIZE', 3)  # Process 3 files at a time by default, adjust as needed
 
         for i in range(0, len(files), batch_size):
             batch = files[i:i+batch_size]
@@ -223,13 +210,10 @@ class ProjectCreator:
             raise
 
     def _create_gitignore(self, project_path: Path):
-        self._create_file(project_path / ".gitignore", Config.GITIGNORE_TEMPLATE)
-
-    def _create_repoaiignore(self, project_path: Path):
-        self._create_file(project_path / ".repoaiignore", Config.REPOAIIGNORE_TEMPLATE)
+        self._create_file(project_path / ".gitignore", config_manager.get('GITIGNORE_TEMPLATE', ''))
 
     def _create_env_file(self, project_path: Path):
-        self._create_file(project_path / ".env", Config.ENV_TEMPLATE)
+        self._create_file(project_path / ".env", config_manager.get('ENV_TEMPLATE', ''))
 
     def _create_file(self, file_path: Path, content: str):
         try:
@@ -306,4 +290,3 @@ class ProjectCreator:
         if not match:
             logger.error(f"Invalid directory structure: {directory_structure}")
         return bool(match)
-    

@@ -7,6 +7,7 @@ from ..llm_provider import LLMProvider
 from ..llm_provider import MessageType
 from ...utils.exceptions import OverloadedError, ConnectionError
 from ...utils.logger import setup_logger
+from ...utils.config_manager import config_manager
 
 logger = setup_logger(__name__)
 
@@ -85,9 +86,8 @@ class OpenAIProvider(LLMProvider):
                         "function": {
                             "name": tool_call.function.name,
                             "arguments": tool_call.function.arguments
-                        }
+                            }
                     })
-            
             return result
         else:
             logger.error("Unexpected response content type")

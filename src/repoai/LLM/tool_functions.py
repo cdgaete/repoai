@@ -1,8 +1,9 @@
-# src/repoai/utils/tool_functions.py
+# src/repoai/LLM/tool_functions.py
 
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from ..utils.config_manager import config_manager
 
 def get_current_time(timezone: str = "UTC") -> dict:
     try:
@@ -13,3 +14,5 @@ def get_current_time(timezone: str = "UTC") -> dict:
         }
     except Exception as e:
         return {"error": f"Unable to get time for timezone {timezone}: {str(e)}"}
+
+# Add any additional tool functions here

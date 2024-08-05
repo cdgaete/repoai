@@ -1,7 +1,9 @@
+# src/repoai/LLM/tool_handler.py
+
 import importlib
 import json
 from typing import Dict, Any, Callable, List
-from ..config import Config
+from ..utils.config_manager import config_manager
 from ..utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -12,7 +14,7 @@ class ToolHandler:
 
     def _load_tools(self):
         self.tools = {}  # Clear existing tools
-        for tool in Config.get_available_tools():
+        for tool in config_manager.get('AVAILABLE_TOOLS', []):
             try:
                 module = importlib.import_module(tool['module'])
                 function = getattr(module, tool['function'])

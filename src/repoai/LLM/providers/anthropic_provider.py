@@ -7,6 +7,7 @@ from ..llm_provider import MessageType
 from ...utils.exceptions import OverloadedError
 from ...utils.exceptions import ConnectionError
 from ...utils.logger import setup_logger
+from ...utils.config_manager import config_manager
 
 logger = setup_logger(__name__)
 

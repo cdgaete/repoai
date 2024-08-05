@@ -2,56 +2,66 @@
 
 import tkinter as tk
 import time
-import re
-import json
 import subprocess
-from tkinter import filedialog
+from tkinter import filedialog, simpledialog
+import os
+import json
 import streamlit as st
 from pathlib import Path
-from repoai.config import Config
-from repoai.LLM.llm_client import LLMManager
-from repoai.utils.git_operations import GitOperations
-from repoai.utils.markdown_generator import MarkdownGenerator
-from repoai.core.project_creator import ProjectCreator
-from repoai.core.llm_expert_chat import LLMExpertChat
-from repoai.utils.exceptions import OverloadedError, ConnectionError
-from repoai.utils.context_managers import FeatureContext
-
-from repoai.utils.logger import setup_logger
-
-logger = setup_logger(__name__)
+import shutil
+from ..config import Config
+from ..LLM.llm_client import LLMManager
+from ..utils.markdown_generator import MarkdownGenerator
+from ..core.project_creator import ProjectCreator
+from ..core.llm_expert_chat import LLMExpertChat
+from ..utils.exceptions import OverloadedError, ConnectionError
+from ..utils.git_operations import GitOperations
+from ..utils.config_manager import config_manager
+from ..utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
-def sanitize_docker_tag(tag):
-    # Convert to lowercase
-    tag = tag.lower()
-    # Replace spaces and other invalid characters with dashes
-    tag = re.sub(r'[^a-z0-9._-]', '-', tag)
-    # Ensure it starts with a letter or number
-    if not tag[0].isalnum():
-        tag = 'project-' + tag
-    return tag
+
+def select_folder():
+    root = tk.Tk()
+    root.withdraw()
+    folder_path = filedialog.askdirectory()
+    root.destroy()
+    return folder_path if folder_path else None
+
+def create_folder():
+    root = tk.Tk()
+    root.withdraw()
+    selected_dir = filedialog.askdirectory(title="Select directory to host the new folder")
+    if not selected_dir:
+        return None
+    
+    folder_name = simpledialog.askstring("Folder name", "Enter the name for the new folder:")
+    if not folder_name:
+        return None
+
+    new_folder_path = os.path.join(selected_dir, folder_name)
+    try:
+        os.makedirs(new_folder_path, exist_ok=False)
+        return new_folder_path
+    except OSError as e:
+        st.error(f"Failed to create folder: {str(e)}")
+        logger.error(f"Failed to create folder: {str(e)}")
+        return None
+    finally:
+        root.destroy()
 
 def initialize_session_state():
-    if "messages_edition" not in st.session_state:
-        st.session_state.messages_edition = []
     if "messages_create" not in st.session_state:
         st.session_state.messages_create = []
-    if "project_root_path" not in st.session_state:
-        st.session_state.project_root_path = None
-    if "current_project_path" not in st.session_state:
-        st.session_state.current_project_path = None
+    if "project_path" not in st.session_state:
+        st.session_state.project_path = None
     if "ai_client" not in st.session_state:
-        st.session_state.ai_client = None
-    if "git_operations" not in st.session_state:
-        st.session_state.git_operations = None
+        st.session_state.ai_client = LLMManager()
     if "markdown_generator" not in st.session_state:
         st.session_state.markdown_generator = MarkdownGenerator()
     if "project_creator" not in st.session_state:
         st.session_state.project_creator = None
-    if "initialized" not in st.session_state:
-        st.session_state.initialized = False
     if "show_repo_content" not in st.session_state:
         st.session_state.show_repo_content = False
     if "selected_file" not in st.session_state:
@@ -60,8 +70,8 @@ def initialize_session_state():
         st.session_state.project_creation_mode = None
     if "project_description_prompt" not in st.session_state:
         st.session_state.project_description_prompt = ""
-    if "create_project_mode" not in st.session_state:
-        st.session_state.create_project_mode = False
+    if "creating_project" not in st.session_state:
+        st.session_state.creating_project = False
     if "llm_expert_chat" not in st.session_state:
         st.session_state.llm_expert_chat = None
     if "chat_messages" not in st.session_state:
@@ -70,80 +80,28 @@ def initialize_session_state():
         st.session_state.file_suggestions = []
     if "selected_operations" not in st.session_state:
         st.session_state.selected_operations = []
-
-def render_project_selection():
-    if st.session_state.project_root_path:
-        st.sidebar.subheader("Project Selection")
-        projects = [d for d in st.session_state.project_root_path.iterdir() if d.is_dir()]
-        selected_project = st.sidebar.selectbox("Select a project", ["None Selected"] + [p.name for p in projects])
-        
-        if selected_project != "None Selected" and not st.session_state.create_project_mode:
-            # Check if the selected project is different from the current one
-            if selected_project != st.session_state.get("current_project", None):
-                # Clear all project-specific variables
-                st.session_state.current_project = selected_project
-                st.session_state.messages_edition = []
-                st.session_state.messages_create = []
-                st.session_state.current_project_path = None
-                st.session_state.ai_client = None
-                st.session_state.git_operations = None
-                st.session_state.project_creator = None
-                st.session_state.show_repo_content = False
-                st.session_state.selected_file = None
-                st.session_state.project_description_prompt = ""
-                st.session_state.llm_expert_chat = None
-                st.session_state.chat_messages = []
-                st.session_state.file_suggestions = []
-                st.session_state.selected_operations = []
-
-                # Set the new project
-                Config.set_current_project(selected_project)
-                st.session_state.current_project_path = Config.get_current_project_path()
-                
-                # Reinitialize components for the new project
-                initialize_components()
-                
-                st.sidebar.success(f"Project '{selected_project}' selected.")
-                st.toast("All previous project data has been cleared.")
-                time.sleep(1.5)
-                st.rerun()  # Add this line to force a rerun after project selection
-            return True
-        else:
-            Config.CURRENT_PROJECT_PATH = None
-            st.session_state.current_project_path = None
-            st.session_state.current_project = None
-    else:
-        st.warning("Please set a project root path first.")
-    return False
+    if "git_operations" not in st.session_state:
+        st.session_state.git_operations = GitOperations()
+    if "user_input" not in st.session_state:
+        st.session_state.user_input = None
 
 def render_project_creation():
     st.header("Create New Project")
-    
-    # Ensure project_creator is initialized
-    if st.session_state.project_creator is None:
-        initialize_components()
-    
-    project_name = st.text_input("Project Name")
 
-    
     if st.session_state.project_creation_mode == "Create Empty Project":
-        if st.button("Create Empty Project"):
-            if project_name:
-                try:
-                    with st.spinner("Creating empty project... This may take a moment."):
-                        new_project_path = st.session_state.project_creator.create_empty_project(project_name)
-                    logger.info(f"New project path: {new_project_path}")  # Add this line
-                    st.success(f"Empty project created successfully at: {new_project_path}")
-                    st.session_state.current_project_path = new_project_path
-                    Config.set_current_project(new_project_path.name)
-                    initialize_components()
-                    st.session_state.initialized = True
-                    st.session_state.create_project_mode = False
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to create empty project: {str(e)}")
-            else:
-                st.error("Please enter a valid project name.")
+        try:
+            with st.spinner("Creating empty project... This may take a moment."):
+                st.session_state.project_creator.create_empty_project(st.session_state.project_path)
+            logger.info(f"New project created: {st.session_state.project_path.name}")
+            st.success(f"Empty project created successfully at: {st.session_state.project_path.name}")
+            st.session_state.creating_project = False
+            st.session_state.project_creator = None
+            st.session_state.project_creation_mode = None
+        except Exception as e:
+            cancel_or_fail()
+            st.error(f"Failed to create empty project: {str(e)}")
+        finally:
+            st.rerun()
 
     elif st.session_state.project_creation_mode == "Describe Project":
         if "messages_create" not in st.session_state:
@@ -183,28 +141,33 @@ def render_project_creation():
         st.markdown(st.session_state.project_description_prompt)
         
         if st.button("Create Project from Description"):
-            if project_name and st.session_state.project_description_prompt:
+            if st.session_state.project_path and st.session_state.project_description_prompt:
                 try:
                     with st.spinner("Creating project based on description... This may take a moment."):
-                        new_project_path = st.session_state.project_creator.create_project_from_description(project_name, st.session_state.project_description_prompt)
-                    st.success(f"Project created successfully at: {new_project_path}")
-                    st.session_state.current_project_path = new_project_path
-                    Config.set_current_project(new_project_path.name)
-                    initialize_components()
-                    st.session_state.initialized = True
-                    st.session_state.create_project_mode = False
+                        st.session_state.project_creator.create_project_from_description(st.session_state.project_path, st.session_state.project_description_prompt)
+                    st.success(f"Project created successfully at: {st.session_state.project_path.name}")
+                    st.session_state.creating_project = False
                     st.session_state.project_description_prompt = None
                     st.session_state.messages_create = []
-                    st.session_state.project_creator = ProjectCreator(st.session_state.ai_client)
-                    st.rerun()
+                    st.session_state.project_creator = None
+                    st.session_state.project_creation_mode = None
                 except Exception as e:
                     st.error(f"Failed to create project: {str(e)}")
+                finally:
+                    st.rerun()
             else:
                 st.error("Please enter a valid project name and ensure there's a project description prompt.")
 
     if st.button("Cancel Project Creation"):
-        st.session_state.create_project_mode = False
-        st.rerun()
+        cancel_or_fail()
+
+
+def cancel_or_fail():
+    st.session_state.creating_project = False
+    shutil.rmtree(st.session_state.project_path)
+    st.session_state.project_path = None
+    st.session_state.project_creator = None
+    st.rerun()
 
 def render_token_counts():
     token_counts = Config.get_token_counts()
@@ -226,22 +189,16 @@ def render_token_counts():
     st.sidebar.write("---")
 
 def render_repository_content():
-    if st.session_state.current_project_path:
-        # Check for .repoaiignore file
-        ignore_file_path = st.session_state.current_project_path / Config.IGNORE_FILE
-        if not ignore_file_path.exists():
-            # Create an empty .repoaiignore file
-            ignore_file_path.touch()
-            st.sidebar.success(f"Created empty {Config.IGNORE_FILE} file.")
+    if st.session_state.project_path:
 
         if "ignore_patterns" not in st.session_state:
-            st.session_state.ignore_patterns = MarkdownGenerator._read_ignore_file(st.session_state.current_project_path)
+            st.session_state.ignore_patterns = MarkdownGenerator._read_ignore_file(st.session_state.project_path)
 
-        # Add Restart Conversation button
         if st.sidebar.button("Restart Conversation"):
             st.session_state.chat_messages = []
             st.session_state.file_suggestions = []
-            st.session_state.llm_expert_chat = LLMExpertChat(st.session_state.ai_client, st.session_state.markdown_generator)
+            st.session_state.llm_expert_chat = None
+            st.session_state.user_input = None
             st.toast("Conversation restarted and project summary reloaded.")
             time.sleep(1.5)
             st.rerun()
@@ -249,10 +206,10 @@ def render_repository_content():
         st.session_state.show_repo_content = st.sidebar.checkbox("Show Repository Content", value=st.session_state.get("show_repo_content", False))
         st.session_state.include_line_numbers = st.sidebar.checkbox("Include Line Numbers", value=st.session_state.get("include_line_numbers", False))
 
-        # Add download button for repository content with a unique key
         repo_str = st.session_state.markdown_generator.generate_repo_content(
-            st.session_state.current_project_path,
+            st.session_state.project_path,
             st.session_state.include_line_numbers,
+            st.session_state.ignore_patterns,
         )
         st.sidebar.download_button(
             label="Download Repository Content",
@@ -264,17 +221,14 @@ def render_repository_content():
 
         st.sidebar.write("---")
 
-        # Ignore patterns section
         st.sidebar.subheader("Ignore Patterns")
         st.sidebar.write(":orange[Save the changes before the chat session starts.]")
         
-        # Display current ignore patterns
         if st.session_state.ignore_patterns:
-            st.sidebar.text_area("Current ignore patterns:", value="\n".join(st.session_state.ignore_patterns), disabled=True, height=150)
+            st.sidebar.text_area("Current ignore patterns:", value="\n".join(st.session_state.ignore_patterns), disabled=True, height=150, help="It reads .repoai/.repoaiignore file. If not found, it loads the default ignore patterns. To customize, you can here add new ignore patterns or remove existing ones. To persist, save the changes and restart the chat session.")
         else:
             st.sidebar.info("No ignore patterns set.")
         
-        # Add new ignore pattern
         new_pattern = st.sidebar.text_input("Add new ignore pattern")
         if st.sidebar.button("Add Pattern"):
             if new_pattern and new_pattern not in st.session_state.ignore_patterns:
@@ -285,7 +239,6 @@ def render_repository_content():
             else:
                 st.sidebar.warning("Please enter a valid pattern.")
         
-        # Remove ignore pattern
         if st.session_state.ignore_patterns:
             pattern_to_remove = st.sidebar.selectbox("Select pattern to remove", [""] + st.session_state.ignore_patterns)
             if st.sidebar.button("Remove Pattern"):
@@ -293,12 +246,12 @@ def render_repository_content():
                     st.session_state.ignore_patterns.remove(pattern_to_remove)
                     st.sidebar.success(f"Removed: {pattern_to_remove}")
         
-        # Save ignore patterns
         if st.sidebar.button("Save Ignore Patterns"):
+            ignore_file_path = Config.get_ignore_file_path(st.session_state.project_path)
             with open(ignore_file_path, "w") as f:
                 for pattern in st.session_state.ignore_patterns:
                     f.write(f"{pattern}\n")
-            st.sidebar.success(f"Ignore patterns saved to {Config.IGNORE_FILE}")
+            st.sidebar.success(f"Ignore patterns saved to {ignore_file_path.name}")
 
         st.sidebar.write("---")
 
@@ -309,7 +262,7 @@ def render_repository_content():
         if st.session_state.show_repo_content:
             st.subheader("Repository Content")
             repo_dict = st.session_state.markdown_generator.generate_repo_container(
-                st.session_state.current_project_path,
+                st.session_state.project_path,
                 False,
                 st.session_state.ignore_patterns
             )
@@ -328,81 +281,117 @@ def render_repository_content():
                 if file_language == "markdown":
                     st.markdown(file_content, unsafe_allow_html=True)
                 else:
-                    st.code(file_content, language=file_language, line_numbers=st.session_state.include_line_numbers)
+                    st.code(file_content,language=file_language, line_numbers=st.session_state.include_line_numbers)
     else:
         st.info("Please select a project to view its content and chat with the LLM expert.")
 
 def render_settings():
     st.sidebar.header("Settings")
 
-    with st.sidebar.expander("Expand"):
-        for task, model in Config.TASK_MODEL_MAPPING.items():
-            st.session_state[task] = st.selectbox(f"Select Model for {task}", [model] + [md for md in Config.MODELS_PROVIDER_MAPPING if md != model], index=0)
-            Config.set_task_model(task, st.session_state[task])
+    # Add help section for task prompts
+    st.sidebar.subheader("Task Prompts Help")
+
+    with st.sidebar.expander("Global Configuration"):
+        for provider in config_manager.get('providers', {}):
+            st.subheader(f"{provider.capitalize()} Configuration")
+            api_key = st.text_input(f"{provider.capitalize()} API Key", value=Config.get_provider_api_key(provider), type="password")
+            api_host = st.text_input(f"{provider.capitalize()} API Host", value=Config.get_provider_api_host(provider))
+            if st.button(f"Save {provider.capitalize()} Config"):
+                config_manager.set(f'providers.{provider}.api_key', api_key)
+                config_manager.set(f'providers.{provider}.api_host', api_host)
+                st.success(f"{provider.capitalize()} configuration saved.")
+
+    with st.sidebar.expander("System Prompts"):
+        for prompt_key, prompt_value in config_manager.get('system_prompts', {}).items():
+            new_prompt = st.text_area(f"Edit {prompt_key}", value=prompt_value, height=150)
+            if new_prompt != prompt_value:
+                config_manager.set(f'system_prompts.{prompt_key}', new_prompt)
+                st.success(f"Updated {prompt_key}.")
+
+    with st.sidebar.expander("Task-Model Mapping"):
+        st.subheader("Creation Tasks")
+        for task in ["PROJECT_DESCRIPTION_CHAT", "PROJECT_CREATOR", "FORMAT_DIRECTORY_STRUCTURE", "FORMAT_FILE_CONTENTS"]:
+            current_model = config_manager.get(f'task_model_mapping.{task}')
+            available_models = list(config_manager.get('MODELS_PROVIDER_MAPPING', {}).keys())
+            
+            if current_model not in available_models:
+                current_model = available_models[0] if available_models else None
+            
+            new_model = st.selectbox(
+                f"Model for {task}",
+                options=available_models,
+                index=available_models.index(current_model) if current_model in available_models else 0
+            )
+            if new_model != current_model:
+                config_manager.set(f'task_model_mapping.{task}', new_model, project_specific=True)
+                st.success(f"Updated model for {task}.")
+
+        st.subheader("Edition Tasks", help="Set a model to global configuration if you want to use it for all projects.")
+        for task in ["EXPERT_CHAT", "EDIT_FILE"]:
+            current_model = config_manager.get(f'task_model_mapping.{task}')
+            available_models = list(config_manager.get('MODELS_PROVIDER_MAPPING', {}).keys())
+            
+            if current_model not in available_models:
+                current_model = available_models[0] if available_models else None
+            
+            new_model = st.selectbox(
+                f"Model for {task}",
+                options=available_models,
+                index=available_models.index(current_model) if current_model in available_models else 0
+            )
+            if new_model != current_model:
+                config_manager.set(f'task_model_mapping.{task}', new_model, project_specific=True)
+                st.success(f"Updated model for {task}.")
+
+    if st.session_state.project_path:
+        with st.sidebar.expander("Project-Specific Configuration"):
+            st.write("Override global settings for this project:")
+            for task, model in config_manager.get('task_model_mapping', {}).items():
+                new_model = st.text_input(f"Project Model for {task}", value=model)
+                if new_model != model:
+                    config_manager.set(f'task_model_mapping.{task}', new_model, project_specific=True)
+                    st.success(f"Updated project-specific model for {task}.")
+
+    if st.sidebar.button("Reset to Default Configuration"):
+        config_manager.reset_to_default()
+        st.sidebar.success("Configuration reset to default values.")
 
     st.sidebar.markdown("---")
     st.sidebar.info("RepoAI - A repository assistant.\nIt helps you create and edit your projects with ease.\n\nMade with ❤️ to the open source community by [Carlos Gaete](https://github.com/cdgaete)\n\nContribute to the project on [GitHub](https://github.com/cdgaete/repoai)")
 
-def initialize_components():
-    try:
-        if st.session_state.project_root_path is None:
-            st.error("Project root path is not set. Please select a project root path first.")
-            return False
-
-        Config.initialize_paths(st.session_state.project_root_path)
-        
-        st.session_state.git_operations = GitOperations()
-        
-        if st.session_state.ai_client is None:
-            st.session_state.ai_client = LLMManager(Config.get_project_root_path())
-        
-        st.session_state.project_creator = ProjectCreator(st.session_state.ai_client)
-        
-        # Load token counts (this will create an empty structure if no project is selected)
-        Config.load_token_counts()
-        
-        st.toast("All components initialized successfully")
-        time.sleep(.5)
-        return True
-    except Exception as e:
-        st.error(f"Failed to initialize components: {str(e)}")
-        return False
-
-def select_folder():
-    root = tk.Tk()
-    root.withdraw()
-    folder_path = filedialog.askdirectory()
-    root.destroy()
-    return folder_path if folder_path else None
 
 def render_sidebar():
     st.sidebar.title("RepoAI")
-    
-    project_root_path = st.sidebar.text_input("Project Root Path", value=st.session_state.get("project_root_path", ""))
-    
-    if st.sidebar.button("Select Project Root Path"):
-        project_root_path = select_folder()
-        if project_root_path:
-            st.session_state.project_root_path = Path(project_root_path)
-            if initialize_components():
-                st.session_state.initialized = True
-                st.rerun()
-    
-    if project_root_path:
-        st.session_state.project_root_path = Path(project_root_path)
-        if not st.session_state.initialized:
-            if initialize_components():
-                st.session_state.initialized = True
-                st.rerun()
 
-    st.sidebar.write("---")
-
-    st.sidebar.subheader("Project Creation")
+    st.sidebar.text_input("Project Path", value=st.session_state.get("project_path", ""), disabled=True)
+    
+    st.sidebar.subheader("Create Project")
     project_creation_options = ["Create Empty Project", "Describe Project"]
     st.session_state.project_creation_mode = st.sidebar.selectbox("Select Project Creation Mode", project_creation_options)
 
     if st.sidebar.button("Start Project Creation"):
-        st.session_state.create_project_mode = True
+        st.session_state.creating_project = True
+        if project_path:= create_folder():
+            st.session_state.project_path = Path(project_path)
+            st.session_state.project_creator = ProjectCreator(st.session_state.ai_client, st.session_state.git_operations)
+            st.session_state.llm_expert_chat = None
+            Config.load_token_counts()
+            st.rerun()
+        else:
+            st.error("Project folder not created. Please finalize folder creation.")
+
+    st.sidebar.write("---")
+
+    st.sidebar.subheader("Select Project")
+    
+    if st.sidebar.button("Select Project"):
+        if project_path := select_folder():
+            st.session_state.project_path = Path(project_path)
+            st.session_state.llm_expert_chat = None
+            Config.load_token_counts()
+            st.rerun()
+        else:
+            st.error("Project path not selected. Please finalize folder selection.")
 
     st.sidebar.write("---")
 
@@ -413,8 +402,13 @@ def find_docker_compose_files(project_path):
 
 def render_docker_compose_section():
     st.sidebar.header("Docker Compose")
-    if st.session_state.current_project_path:
-        compose_files = find_docker_compose_files(st.session_state.current_project_path)
+    if st.session_state.project_path:
+        if st.sidebar.button("Add Docker Prompt"):
+            docker_prompt = Config.get_prompt("CREATE_DOCKERFILES_PROMPT")
+            chat_update(docker_prompt, is_docker_prompt=True)
+            st.rerun()
+
+        compose_files = find_docker_compose_files(st.session_state.project_path)
         if compose_files:
             selected_file = st.sidebar.selectbox("Select Docker Compose file", compose_files)
             col1, col2 = st.sidebar.columns(2)
@@ -431,7 +425,7 @@ def run_docker_compose(file_name):
     try:
         result = subprocess.run(
             ['docker', 'compose', '-f', file_name, 'up', '-d'],
-            cwd=st.session_state.current_project_path,
+            cwd=st.session_state.project_path,
             capture_output=True,
             text=True
         )
@@ -444,10 +438,9 @@ def run_docker_compose(file_name):
 
 def rebuild_and_rerun_docker_compose(file_name):
     try:
-        # Run docker-compose down
         down_result = subprocess.run(
             ['docker', 'compose', '-f', file_name, 'down'],
-            cwd=st.session_state.current_project_path,
+            cwd=st.session_state.project_path,
             capture_output=True,
             text=True
         )
@@ -455,10 +448,9 @@ def rebuild_and_rerun_docker_compose(file_name):
             st.sidebar.error(f"Error stopping Docker Compose: {down_result.stderr}")
             return
 
-        # Run docker-compose up --build -d
         up_result = subprocess.run(
             ['docker', 'compose', '-f', file_name, 'up', '--build', '-d'],
-            cwd=st.session_state.current_project_path,
+            cwd=st.session_state.project_path,
             capture_output=True,
             text=True
         )
@@ -471,39 +463,19 @@ def rebuild_and_rerun_docker_compose(file_name):
 
 def chat_edition_session():
     st.info("Avoid long conversations; sometimes it's best to restart the chat to provide a fresh view of the project's state. The chat has a history, but the AI can get confused with longer conversations.")
-    # Always show the chat interface
     st.subheader("Chat with the AI assistant")
     if st.session_state.llm_expert_chat is None:
-        st.session_state.llm_expert_chat = LLMExpertChat(st.session_state.ai_client, st.session_state.markdown_generator)
+        st.session_state.llm_expert_chat = LLMExpertChat(st.session_state.ai_client, st.session_state.markdown_generator, st.session_state.git_operations, st.session_state.project_path)
 
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input(f"Ask about '{st.session_state.current_project}' project content or request changes/suggestions/improvements."):
-        st.session_state.chat_messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        if prompt.lower() == 'show content':
-            st.session_state.show_repo_content = True
-        else:
-            with st.chat_message("assistant"):
-                try:
-                    response = st.session_state.llm_expert_chat.chat(prompt, st.session_state.current_project_path.name)
-                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
-                    st.markdown(response)
-
-                    # Update file suggestions
-                    st.session_state.file_suggestions = st.session_state.llm_expert_chat.get_file_suggestions()
-                except ConnectionError as e:
-                    st.error(str(e))
-                except OverloadedError as e:
-                    st.warning(str(e))
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
-
-    # Display file operation suggestions
+    if not st.session_state.user_input:
+        prompt = st.chat_input(f"Ask about the project content or request changes/suggestions/improvements.")
+        if prompt:
+            chat_update(prompt)
+    
     if st.session_state.file_suggestions:
         st.subheader("File Operation Suggestions")
         selected_operations = st.multiselect(
@@ -515,5 +487,31 @@ def chat_edition_session():
         if st.button("Apply Selected Operations"):
             st.session_state.llm_expert_chat.apply_file_operations(selected_operations)
             st.toast("Selected operations applied successfully!")
+            st.session_state.file_suggestions = []
             time.sleep(1.0)
             st.rerun()
+    
+    if st.session_state.user_input:
+        prompt = st.text_area("Edit Docker Generation Prompt:", value=st.session_state.get("user_input", ""), height=150)
+        if st.button("Send Prompt"):
+            chat_update(prompt)
+            st.session_state.user_input = None
+
+def chat_update(prompt, is_docker_prompt=False):
+    if is_docker_prompt:
+        st.session_state.chat_messages.append({"role": "system", "content": prompt})
+    else:
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+    
+    with st.chat_message("user" if not is_docker_prompt else "system"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        response = st.session_state.llm_expert_chat.chat(prompt)
+        st.session_state.chat_messages.append({"role": "assistant", "content": response})
+        st.markdown(response)
+
+        st.session_state.file_suggestions = st.session_state.llm_expert_chat.get_file_suggestions()
+
+    if is_docker_prompt:
+        st.session_state.user_input = None

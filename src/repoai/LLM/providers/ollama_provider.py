@@ -1,10 +1,12 @@
+# src/repoai/LLM/providers/ollama_provider.py
+
 import ollama
 from typing import Optional, List, Any, Dict
 from ..llm_provider import LLMProvider
 from ..llm_provider import MessageType
-from ...config import Config
 from ...utils.exceptions import OverloadedError, ConnectionError
 from ...utils.logger import setup_logger
+from ...utils.config_manager import config_manager
 
 logger = setup_logger(__name__)
 

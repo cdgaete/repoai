@@ -1,12 +1,16 @@
-import logging
-from ..config import Config
+# src/repoai/utils/logger.py
 
+import logging
+from .config_manager import config_manager
 
 def setup_logger(name, log_file=None):
     logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, Config.LOG_LEVEL))
+    logger.setLevel(getattr(logging, config_manager.get('LOG_LEVEL', 'INFO')))
 
-    formatter = logging.Formatter(Config.LOG_FORMAT, datefmt=Config.LOG_DATE_FORMAT)
+    formatter = logging.Formatter(
+        config_manager.get('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
+        datefmt=config_manager.get('LOG_DATE_FORMAT', '%Y-%m-%d %H:%M:%S')
+        )
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)

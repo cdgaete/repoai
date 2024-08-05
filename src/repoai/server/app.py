@@ -4,7 +4,6 @@ import streamlit as st
 from repoai.server.components import (
     initialize_session_state,
     render_sidebar,
-    render_project_selection,
     render_project_creation,
     render_repository_content,
     render_docker_compose_section,
@@ -21,13 +20,13 @@ def main():
     
     render_sidebar()
     
-    if st.session_state.create_project_mode:
+    if st.session_state.creating_project:
         render_project_creation()
+    elif st.session_state.project_path:
+        render_repository_content()
+        render_docker_compose_section()
     else:
-        project_selected = render_project_selection()
-        if project_selected:
-            render_repository_content()
-            render_docker_compose_section()
+        st.info("Please select or create a project to get started.")
     
     render_settings()
 

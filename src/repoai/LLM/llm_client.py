@@ -16,29 +16,52 @@ from .providers.groq_provider import GroqProvider
 from ..config import Config
 from ..utils.logger import setup_logger
 from ..utils.context_managers import use_tools
+from ..utils.config_manager import config_manager
 
 dirs = AppDirs("repoai", "repoai")
 
 logger = setup_logger(__name__)
 
 class LLMManager:
-    def __init__(self, repo_path: Path):
-        self.repo_path = repo_path
-        self.current_project = None
+    def __init__(self):
         self.current_phase = None
         self.tool_handler = ToolHandler()
-
-    def set_current_project(self, project_name: str):
-        self.current_project = project_name
+        self.runtime_overrides = {}
 
     def set_current_phase(self, phase: str):
         self.current_phase = phase
 
+    def set_runtime_override(self, key: str, value: Any):
+        self.runtime_overrides[key] = value
+
+    def clear_runtime_overrides(self):
+        self.runtime_overrides.clear()
+
+    def get_config(self, key: str, default: Any = None):
+        # First check in runtime_overrides
+        value = self.runtime_overrides
+        for part in key.split('.'):
+            if isinstance(value, dict):
+                value = value.get(part)
+            else:
+                break
+
+        if value is None:
+            # If not found in runtime_overrides, check in config_manager
+            value = config_manager.config
+            for part in key.split('.'):
+                if isinstance(value, dict):
+                    value = value.get(part)
+                else:
+                    break
+        return value if value is not None else default
+ 
+
     def _get_llm_provider(self, task: str) -> LLMProvider:
-        model = Config.get_model_for_task(task)
-        provider = Config.get_provider_for_model(model)
-        api_key = Config.get_provider_api_key(provider)
-        api_host = Config.get_provider_api_host(provider)
+        model = self.get_config(f"task_model_mapping.{task}")
+        provider = self.get_config(f"MODELS_PROVIDER_MAPPING.{model}")
+        api_key = self.get_config(f"providers.{provider}.api_key")
+        api_host = self.get_config(f"providers.{provider}.api_host")
         if provider == "anthropic":
             return AnthropicProvider(api_key, api_host)
         elif provider == "ollama":
@@ -53,9 +76,9 @@ class LLMManager:
             raise ValueError(f"Unsupported provider: {provider}")
         
     def get_response(self, task: str, system_prompt: str, messages: List[MessageType], **kwargs) -> Optional[str]:
-        model = Config.get_model_for_task(task)
+        model = self.get_config(f"task_model_mapping.{task}")
         llm_provider = self._get_llm_provider(task)
-        config = Config.get_model_config(model)
+        config = self.get_config(f"providers.{llm_provider.provider}.default_params", {})
         config = {**config, **kwargs}
 
         # Remove tool-related configurations if tools are not being used
@@ -76,9 +99,9 @@ class LLMManager:
         return self._process_response(response_dc, model, messages, task, system_prompt)
 
     def get_chat_response(self, task: str, messages: List[MessageType], **kwargs) -> Optional[str]:
-        model = Config.get_model_for_task(task)
+        model = self.get_config(f"task_model_mapping.{task}")
         llm_provider = self._get_llm_provider(task)
-        config = Config.get_model_config(model)
+        config = self.get_config(f"providers.{llm_provider.provider}.default_params", {})
         config = {**config, **kwargs}
         
         # Remove tool-related configurations if tools are not being used
@@ -135,7 +158,7 @@ class LLMManager:
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "task": task,
-            "provider": Config.get_provider_for_model(model),
+            "provider": self.get_config(f"MODELS_PROVIDER_MAPPING.{model}"),
             "model": model,
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
@@ -143,17 +166,24 @@ class LLMManager:
             "messages": messages,
             "response": response,
         }
+        print(system_prompt)
+        print("===========================")
+        print(messages[-1]["content"])
+        print("===========================")
+        print(response)
+        print("===========================")
 
         os.makedirs(dirs.user_data_dir, exist_ok=True)
-        log_file = Config.get_llm_response_log_file(dirs.user_data_dir)
+        log_file = Config.get_llm_response_log_file(Path(dirs.user_data_dir))
         
         try:
             # Check if file size exceeds MAX_LOG_SIZE
-            if os.path.exists(log_file) and os.path.getsize(log_file) > Config.MAX_LOG_SIZE:
+            max_log_size = config_manager.get('MAX_LOG_SIZE', 10 * 1024 * 1024)  # Default to 10 MB if not set
+            if os.path.exists(log_file) and os.path.getsize(log_file) > max_log_size:
                 # Rename the current file
                 backup_file = log_file.with_suffix(f".{datetime.now().strftime('%Y%m%d%H%M%S')}.jsonl")
                 os.rename(log_file, backup_file)
-                logger.info(f"Logging LLM file size exceeded {Config.MAX_LOG_SIZE} bytes. Rotated to {backup_file}")
+                logger.info(f"Logging LLM file size exceeded {max_log_size} bytes. Rotated to {backup_file}")
 
             logger.info(f"Logging LLM response to: {log_file}")
             with open(log_file, "a") as f:
