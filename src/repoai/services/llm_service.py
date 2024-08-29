@@ -86,11 +86,8 @@ class LLMService:
 
         if 'max_tokens' in kwargs:
             max_tokens = kwargs['max_tokens']
-            if max_tokens > 4096:
-                extra_headers = kwargs.get('extra_headers', {})
-                extra_headers["anthropic-beta"] = "max-tokens-3-5-sonnet-2024-07-15"
-                kwargs['extra_headers'] = extra_headers
-                kwargs['max_tokens'] = min(max_tokens, 8192)
+            if max_tokens > 8192:
+                kwargs['max_tokens'] = 8192
                 logger.debug(f"Changed max_tokens from {max_tokens} to {kwargs['max_tokens']} due to model limits")
 
         kwargs['messages'] = messages

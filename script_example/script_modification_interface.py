@@ -2,6 +2,7 @@ from pathlib import Path
 from repoai import initialize, ProjectManager
 from repoai.core.interface_manager import InterfaceManager
 
+
 # Define your model configuration
 model_config = {
     "project_modification_workflow": {
@@ -38,6 +39,23 @@ model_config = {
         "file_edit_task": {
             "model": "anthropic/claude-3-5-sonnet-20240620",
             "temperature": 0.2
+        }
+    }
+}
+
+model_config = {
+    "project_modification_workflow":{
+        "project_modification_task":{
+            "model": "anthropic/claude-3-5-sonnet-20240620",
+            "temperature": 0.8,
+            "max_tokens": 8000,
+            "use_prompt_caching": True
+        },
+        "file_edit_task":{
+            "model": "anthropic/claude-3-5-sonnet-20240620",
+            "temperature": 0.1,
+            "max_tokens": 8000,
+            "use_prompt_caching": True
         }
     }
 }
