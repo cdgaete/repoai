@@ -1,24 +1,32 @@
 # src/repoai/utils/logger.py
 
 import logging
-from .config_manager import config_manager
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-def setup_logger(name, log_file=None):
-    logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, config_manager.get('LOG_LEVEL', 'INFO')))
+def setup_logger(config):
+    logger = logging.getLogger('repoai')
+    logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter(
-        config_manager.get('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
-        datefmt=config_manager.get('LOG_DATE_FORMAT', '%Y-%m-%d %H:%M:%S')
+    if not logger.handlers:
+        # Console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_formatter = logging.Formatter('%(levelname)s: %(message)s')
+        console_handler.setFormatter(console_formatter)
+        logger.addHandler(console_handler)
+
+        # File handler
+        log_file = config.get('log_file')
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=config.get('max_log_file_size'),
+            backupCount=config.get('log_backup_count')
         )
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.DEBUG)
+        file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
-    return logger
+def get_logger(name):
+    return logging.getLogger(f'repoai.{name}')

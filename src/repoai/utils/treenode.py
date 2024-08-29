@@ -1,85 +1,81 @@
 from pathlib import Path
-import re
-import fnmatch
+from ..utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 class TreeNode:
-    def __init__(self, path, parent=None, is_last=False):
-        self.path = Path(str(path))
-        self.parent = parent
+    def __init__(self, path, is_last=False):
+        self.path = Path(path)
         self.is_last = is_last
-        self.depth = self.parent.depth + 1 if self.parent else 0
+        self.children = []
 
     @property
     def display_name(self):
-        return f"{self.path.name}/" if self.path.is_dir() else self.path.name
+        return self.path.name
 
 class FileSystemTree:
-    PREFIX_MIDDLE = '├──'
-    PREFIX_LAST = '└──'
-    PREFIX_PARENT_MIDDLE = '│   '
-    PREFIX_PARENT_LAST = '    '
+    PREFIX_MIDDLE = '├── '
+    PREFIX_LAST = '└── '
+    PREFIX_VERTICAL = '│   '
+    PREFIX_SPACE = '    '
 
     @classmethod
-    def generate(cls, root, criteria=None, ignore_file=None):
-        root = Path(str(root))
-        criteria = criteria or cls._default_criteria
-        ignore_patterns = cls._load_ignore_patterns(ignore_file)
+    def generate(cls, filtered_files):
+        root = Path(".")
+        root_node = TreeNode(root)
 
-        def _generate_tree(path, parent=None, is_last=False):
-            node = TreeNode(path, parent, is_last)
-            yield node
+        for file_path in sorted(filtered_files):
+            path = Path(file_path)
+            relative_path = path.relative_to(root)
+            cls._add_path_to_tree(root_node, relative_path)
 
-            if path.is_dir():
-                children = sorted(
-                    [child for child in path.iterdir()
-                     if criteria(child) and not cls._is_ignored(child, ignore_patterns, root)],
-                    key=lambda s: str(s).lower()
-                )
-
-                last_index = len(children) - 1
-                for index, child in enumerate(children):
-                    yield from _generate_tree(child, node, index == last_index)
-
-        return _generate_tree(root)
-
-    @staticmethod
-    def _default_criteria(path):
-        return True
-
-    @staticmethod
-    def _load_ignore_patterns(ignore_file):
-        if ignore_file:
-            ignore_path = Path(ignore_file)
-            if ignore_path.exists():
-                with ignore_path.open('r') as f:
-                    return [line.strip() for line in f if line.strip() and not line.startswith('#')]
-        return []
-
-    @staticmethod
-    def _is_ignored(path, ignore_patterns, root):
-        path_str = str(path.relative_to(root))
-        return any(FileSystemTree._match_pattern(path_str, pattern) for pattern in ignore_patterns)
-
-    @staticmethod
-    def _match_pattern(path, pattern):
-        # Convert .gitignore pattern to regex
-        regex = fnmatch.translate(pattern)
-        return re.match(regex, path) is not None
+        cls._set_last_flags(root_node)
+        return root_node
 
     @classmethod
-    def display(cls, node):
-        if node.parent is None:
-            return node.display_name
+    def _add_path_to_tree(cls, root_node, relative_path):
+        current_node = root_node
+        parts = relative_path.parts
 
-        prefix = cls.PREFIX_LAST if node.is_last else cls.PREFIX_MIDDLE
-        parts = [f"{prefix} {node.display_name}"]
+        for i, part in enumerate(parts):
+            child_node = cls._find_or_create_child(current_node, part)
+            current_node = child_node
 
-        parent = node.parent
-        while parent and parent.parent is not None:
-            parts.append(
-                cls.PREFIX_PARENT_LAST if parent.is_last else cls.PREFIX_PARENT_MIDDLE
-            )
-            parent = parent.parent
+    @classmethod
+    def _find_or_create_child(cls, parent_node, child_name):
+        for child in parent_node.children:
+            if child.path.name == child_name:
+                return child
 
-        return ''.join(reversed(parts))
+        child_path = parent_node.path / child_name
+        child_node = TreeNode(child_path)
+        parent_node.children.append(child_node)
+        return child_node
 
+    @classmethod
+    def _set_last_flags(cls, node):
+        if node.children:
+            for child in node.children[:-1]:
+                child.is_last = False
+                cls._set_last_flags(child)
+            node.children[-1].is_last = True
+            cls._set_last_flags(node.children[-1])
+
+    @classmethod
+    def display(cls, node, prefix=""):
+        lines = [node.display_name]
+
+        def _inner_display(node, prefix=""):
+            for child in node.children[:-1]:
+                lines.append(f"{prefix}{cls.PREFIX_MIDDLE}{child.display_name}")
+                if child.children:
+                    _inner_display(child, prefix + cls.PREFIX_VERTICAL)
+
+            if node.children:
+                last_child = node.children[-1]
+                lines.append(f"{prefix}{cls.PREFIX_LAST}{last_child.display_name}")
+                if last_child.children:
+                    _inner_display(last_child, prefix + cls.PREFIX_SPACE)
+
+        _inner_display(node)
+        return lines

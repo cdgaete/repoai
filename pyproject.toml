@@ -4,25 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repoai"
-description = "AI-assisted repository management and code editing tool with Streamlit interface"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+description = "AI-assisted repository content creation and edition"
+authors = [{name = "Carlos Gaete-Morales", email = "cdgaete@gmail.com"}]
 license = {file = "LICENSE"}
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "anthropic",
-    "openai",
-    "ollama",
-    "python-dotenv",
     "gitpython",
-    "Streamlit",
     "appdirs",
     "chardet",
+    "docker",
+    "litellm",
+    "rich"
 ]
 
 dynamic = ["version"]
@@ -55,7 +53,7 @@ warn_unused_configs = true
 
 [tool.black]
 line-length = 150
-target-version = ['py38']
+target-version = ['py39']
 
 [project.scripts]
-repoai = "repoai.__main__:main"
+repoai = "repoai.main:main"

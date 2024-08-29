@@ -1,8 +1,6 @@
-anthropic
-openai
-ollama
-python-dotenv
 gitpython
-Streamlit
 appdirs
 chardet
+docker
+litellm==1.44.7
+rich
