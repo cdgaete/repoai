@@ -79,7 +79,7 @@ class GitService:
             'previous': ""
         }
 
-        result['current'] = self.file_manager.read_file(file_path)
+        result['current'] = self.repo.git.show(f':{file_path}')
 
         try:
             commits = list(self.repo.iter_commits(paths=file_path, max_count=1))

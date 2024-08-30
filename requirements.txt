@@ -2,5 +2,5 @@ gitpython
 appdirs
 chardet
 docker
-litellm==1.44.7
+litellm
 rich
