@@ -144,7 +144,7 @@ class ProjectManager:
             self.execute_pending_operations(f"""Operation commit before '{operations[0]["operation"]}' '{operations[0]['file_path']}'""")
         finally_untracked_or_changed = set(self.git_service.get_untracked_and_changed_files())
 
-        commited = initially_untracked_or_changed.symmetric_difference(finally_untracked_or_changed)
+        commited = initially_untracked_or_changed - finally_untracked_or_changed
         logger.debug(f"Committed files: {sorted(commited)}")
 
     def create_directory_in_batch(self, directory_path: str):  # This does not need to be commited.
