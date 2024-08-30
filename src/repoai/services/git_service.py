@@ -1,6 +1,6 @@
 from git import Repo, InvalidGitRepositoryError
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -72,3 +72,23 @@ class GitService:
             }
             for commit in commits
         ]
+    
+    def get_file_versions(self, file_path: str) -> Dict[str, Optional[str]]:
+        result = {
+            'current': "",
+            'previous': ""
+        }
+
+        result['current'] = self.file_manager.read_file(file_path)
+
+        try:
+            commits = list(self.repo.iter_commits(paths=file_path, max_count=1))
+            if len(commits) > 0:
+                previous_commit = commits[-1]
+                result['previous'] = self.repo.git.show(f'{previous_commit.hexsha}:{file_path}')
+            else:
+                logger.info(f"No previous version found for file: {file_path}")
+        except Exception as e:
+            logger.error(f"Error retrieving previous version of file {file_path}: {str(e)}")
+
+        return result
