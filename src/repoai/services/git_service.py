@@ -32,10 +32,7 @@ class GitService:
         return False
 
     def _has_changes(self, file_path: str) -> bool:
-        logger.debug(f"Checking if changes exist for file: {file_path}")
-        logger.debug(f"Pending operations: {self.pending_to_stage}")
-        logger.debug(f"Untracked files: {self.repo.untracked_files}")
-        if file_path in self.repo.untracked_files:
+        if file_path in self.get_untracked_and_changed_files():
             return True
         return False
 
@@ -98,3 +95,8 @@ class GitService:
             logger.error(f"Error retrieving previous version of file {file_path}: {str(e)}")
 
         return result
+    
+    def get_untracked_and_changed_files(self):
+        changed = [item.a_path for item in self.repo.index.diff(None)]
+        untracked = self.repo.untracked_files
+        return changed + untracked
