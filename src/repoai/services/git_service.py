@@ -74,17 +74,20 @@ class GitService:
         ]
     
     def get_file_versions(self, file_path: str) -> Dict[str, Optional[str]]:
+        assert not file_path.startswith('/') or not file_path.startswith('./'), "File path must be relative"
+        abs_file_path = self.project_path / file_path
+        assert abs_file_path.exists(), f"File {file_path} does not exist"
         result = {
             'current': "",
             'previous': ""
         }
-
-        result['current'] = self.repo.git.show(f':{file_path}')
+        with open(abs_file_path, 'r', encoding='utf-8') as f:
+            result['current'] = f.read()
 
         try:
             commits = list(self.repo.iter_commits(paths=file_path, max_count=1))
             if len(commits) > 0:
-                previous_commit = commits[-1]
+                previous_commit = commits[0]
                 result['previous'] = self.repo.git.show(f'{previous_commit.hexsha}:{file_path}')
             else:
                 logger.info(f"No previous version found for file: {file_path}")
