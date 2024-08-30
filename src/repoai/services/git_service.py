@@ -32,6 +32,9 @@ class GitService:
         return False
 
     def _has_changes(self, file_path: str) -> bool:
+        logger.debug(f"Checking if changes exist for file: {file_path}")
+        logger.debug(f"Pending operations: {self.pending_to_stage}")
+        logger.debug(f"Untracked files: {self.repo.untracked_files}")
         if file_path in self.repo.untracked_files:
             return True
         return False
