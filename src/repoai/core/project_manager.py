@@ -95,7 +95,7 @@ class ProjectManager:
         return self.file_manager.read_file(file_path)
 
     def batch_operations(self, operations: List[Dict[str, Any]]):
-        logger.debug(f"Executing batch operations... {[f"{op['operation']}:{op['file_path']}" for op in operations]}")
+        logger.debug(f"""Executing batch operations... {[f"{op['operation']}:{op['file_path']}" for op in operations]}""")
         initially_untracked_or_changed = set(self.git_service.get_untracked_and_changed_files())
         processed_files = set()
         files_other_than_create_directory = set()
