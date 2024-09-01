@@ -74,12 +74,15 @@ class GitService:
         ]
     
     def get_file_versions(self, file_path: str) -> Dict[str, Optional[str]]:
-        assert not file_path.startswith('/') or not file_path.startswith('./'), "File path must be relative"
+        if file_path.startswith('/') or file_path.startswith('./'):
+            return {"current": "", "previous": "", "message": "File path should be relative to project root and not contain './' or '/' at the beginning of the path"}
         abs_file_path = self.project_path / file_path
-        assert abs_file_path.exists(), f"File {file_path} does not exist"
+        if not abs_file_path.exists():
+            return {"current": "", "previous": "", "message": "File not found"}
         result = {
             'current': "",
-            'previous': ""
+            'previous': "",
+            'message': ""
         }
         with open(abs_file_path, 'r', encoding='utf-8') as f:
             result['current'] = f.read()
@@ -89,12 +92,13 @@ class GitService:
             if len(commits) > 0:
                 previous_commit = commits[0]
                 result['previous'] = self.repo.git.show(f'{previous_commit.hexsha}:{file_path}')
+                result['message'] = "Previous version found"
+                logger.debug(f"Previous version of file {file_path} found: {previous_commit.hexsha}")
+                return result
             else:
-                logger.info(f"No previous version found for file: {file_path}")
+                logger.debug(f"No previous version found for file: {file_path}")
         except Exception as e:
             logger.error(f"Error retrieving previous version of file {file_path}: {str(e)}")
-
-        return result
     
     def get_untracked_and_changed_files(self):
         changed = [item.a_path for item in self.repo.index.diff(None)]

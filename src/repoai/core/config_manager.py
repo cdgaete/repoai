@@ -58,7 +58,7 @@ class ConfigManager:
 
     def set_default_global_config(self):
         self.global_config = {
-            'default_model': 'ollama/llama3.1',
+            'default_model': 'anthropic/claude-3-5-sonnet-20240620',
             'log_level': 'INFO',
             'log_file': str(self.user_dir / 'repoai.log'),
             'max_log_file_size': 10 * 1024 * 1024,  # 10 MB

@@ -99,10 +99,9 @@ class ProjectModificationInterface(BaseInterface):
     def display_ai_response(self):
         ai_response = self.context['messages'][-1]['content']
         self.display_output(ai_response.strip())
-        total_tokens = token_counter(model=self.model_config['project_modification_workflow']['project_modification_task']['model'], messages=self.context['messages'])
-        user_tokens = token_counter(model=self.model_config['project_modification_workflow']['project_modification_task']['model'], text=self.context['messages'][-2]['content'])
-        assistant_tokens = token_counter(model=self.model_config['project_modification_workflow']['project_modification_task']['model'], text=self.context['messages'][-1]['content'])
-        self.console.print(f"[bold]Total tokens used:[/bold] {total_tokens} | [bold]User tokens:[/bold] {user_tokens} | [bold]Assistant tokens:[/bold] {assistant_tokens}")
+        total_tokens = token_counter(model=self.model_config.get('project_modification_workflow', {}).get('project_modification_task', {}).get('model', ''), messages=self.context['messages'])
+        assistant_tokens = token_counter(model=self.model_config.get('project_modification_workflow', {}).get('project_modification_task', {}).get('model', ''), text=self.context['messages'][-1]['content'])
+        self.console.print(f"[bold]Total tokens used:[/bold] {total_tokens} | [bold]Response tokens:[/bold] {assistant_tokens}")
 
     def display_proposed_modifications(self):
         if 'modifications' in self.context:

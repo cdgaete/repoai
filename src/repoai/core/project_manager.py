@@ -96,7 +96,6 @@ class ProjectManager:
 
     def batch_operations(self, operations: List[Dict[str, Any]]):
         logger.debug(f"""Executing batch operations... {[f"{op['operation']}:{op['file_path']}" for op in operations]}""")
-        initially_untracked_or_changed = set(self.git_service.get_untracked_and_changed_files())
         processed_files = set()
         files_other_than_create_directory = set()
         deleted_directories = set()
@@ -142,10 +141,6 @@ class ProjectManager:
         # Handle any remaining operations
         if self.pending_operations:
             self.execute_pending_operations(f"""Operation commit before '{operations[0]["operation"]}' '{operations[0]['file_path']}'""")
-        finally_untracked_or_changed = set(self.git_service.get_untracked_and_changed_files())
-
-        commited = initially_untracked_or_changed - finally_untracked_or_changed
-        logger.debug(f"Committed files: {sorted(commited)}")
 
     def create_directory_in_batch(self, directory_path: str):  # This does not need to be commited.
         self.file_manager.create_directory(directory_path)
