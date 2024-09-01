@@ -40,7 +40,7 @@ class ProjectModificationInterface(BaseInterface):
     def run_project_modification_workflow(self):
 
         self.display_output(self.context['project_report'])
-        Initial_tokens = token_counter(model=self.model_config['project_modification_workflow']['project_modification_task']['model'], text=self.context['project_report'])
+        Initial_tokens = token_counter(model=self.model_config.get('project_modification_workflow', {}).get('project_modification_task', {}).get('model', ''), text=self.context['project_report'])
         self.console.print(f"[bold]Project report tokens:[/bold] {Initial_tokens}")
         while True:
             user_input = self.handle_input("Describe what you want to do (or 'exit' to quit or 'reset' to start over) press Enter twice to submit:")
