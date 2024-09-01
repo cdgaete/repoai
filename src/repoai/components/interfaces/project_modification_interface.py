@@ -12,8 +12,6 @@ from ...utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-
-
 class ProjectModificationInterface(BaseInterface):
     def __init__(self, project_manager: ProjectManager, model_config: Dict[str, Any] = {}):
         super().__init__(project_manager, model_config)
@@ -27,7 +25,6 @@ class ProjectModificationInterface(BaseInterface):
         self.manage_context()
         self.run_project_modification_workflow()
 
-
     def manage_context(self):
         last_state = self.progress_service.get_last_state()
         if last_state:
@@ -38,7 +35,6 @@ class ProjectModificationInterface(BaseInterface):
         self.context = self.workflow.reset_chat()
 
     def run_project_modification_workflow(self):
-
         self.display_output(self.context['project_report'])
         Initial_tokens = token_counter(model=self.model_config.get('project_modification_workflow', {}).get('project_modification_task', {}).get('model', ''), text=self.context['project_report'])
         self.console.print(f"[bold]Project report tokens:[/bold] {Initial_tokens}")
@@ -164,4 +160,11 @@ class ProjectModificationInterface(BaseInterface):
                 self.context['project_report'] = self.workflow.generate_project_report()
 
         self.console.print(f"[yellow]Resuming from step: {last_step}[/yellow]")
+        
+        if last_step == "project_modification":
+            self.context = self.workflow.resume_workflow(self.context)
+            if 'diffs' in self.context:
+                self.console.print("Changes applied successfully!", style="bold green")
+                self.display_diffs(self.context['diffs'])
+        
         self.run_project_modification_workflow()

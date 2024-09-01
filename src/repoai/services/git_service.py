@@ -96,7 +96,11 @@ class GitService:
                 logger.debug(f"Previous version of file {file_path} found: {previous_commit.hexsha}")
                 return result
             else:
+                result['previous'] = ""
+                result['message'] = "No previous version found or the file is not tracked with git"
                 logger.debug(f"No previous version found for file: {file_path}")
+                return result
+
         except Exception as e:
             logger.error(f"Error retrieving previous version of file {file_path}: {str(e)}")
     

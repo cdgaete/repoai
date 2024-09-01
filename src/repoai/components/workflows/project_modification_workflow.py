@@ -134,7 +134,7 @@ class ProjectModificationWorkflow(BaseWorkflow):
 
     def generate_project_report(self) -> str:
         return self.markdown_service.generate_markdown_compilation(
-            f" " # Empty. This can be replaced with a project name of additional description, maybe AI generated.
+            f" "
         )
 
     def reset_chat(self) -> Dict[str, Any]:
@@ -143,3 +143,9 @@ class ProjectModificationWorkflow(BaseWorkflow):
         new_context['project_report'] = self.generate_project_report()
         self.progress_service.clear_progress()
         return new_context
+
+    def resume_workflow(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        if 'modifications' in context:
+            diffs = self.apply_modifications(context)
+            context['diffs'] = diffs
+        return context
