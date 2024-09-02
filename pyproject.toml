@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repoai"
-description = "AI-assisted repository content creation and edition"
+description = "AI-assisted repository content creation and editing"
 authors = [{name = "Carlos Gaete-Morales", email = "cdgaete@gmail.com"}]
 license = {file = "LICENSE"}
 readme = "README.md"
