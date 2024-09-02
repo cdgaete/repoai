@@ -6,7 +6,7 @@ from repoai.services.llm_service import LLMService
 async def main():
     config = initialize()
     project_name = "llm_test"
-    root_path = "/home/cgaete/repoai_projects"
+    root_path = "/path/to/repoai_projects"
     project_path = Path(root_path) / project_name
     project_manager = ProjectManager(project_path, create_if_not_exists=True)
     llm_service = LLMService(project_manager.project_path, config)
