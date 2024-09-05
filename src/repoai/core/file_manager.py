@@ -133,17 +133,32 @@ class FileManager:
     def directory_exists(self, directory_path: str) -> bool:
         return (self.project_path / directory_path).is_dir()
 
-    def generate_repo_content(self) -> Dict[str, Any]:
-        files = self.list_files_not_ignored()
-        directories = self.list_directories_not_ignored()
+    def generate_repo_content(self, files: Optional[List[str]] = None) -> Dict[str, Any]:
+        if not files:
+            files = self.list_files_not_ignored()
 
         repo_content = {
             "files": files,
-            "directories": directories,
             "content": {},
         }
 
         for file_path in files:
+            complete_file_path = self.project_path / file_path
+            if complete_file_path.is_dir():
+                continue
+
+            if complete_file_path.is_symlink():
+                logger.warning(f"File {file_path} is a symbolic link and cannot be included in the context report.")
+                continue
+
+            if not complete_file_path.exists():
+                logger.warning(f"File {file_path} does not exist and cannot be included in the context report.")
+                continue
+
+            if not is_text_file(str(complete_file_path)):
+                logger.warning(f"File {file_path} is not a text file and cannot be included in the context report.")
+                continue
+
             repo_content["content"][file_path] = self.read_file(file_path)
 
         return repo_content

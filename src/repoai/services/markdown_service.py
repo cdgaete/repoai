@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from ..utils.markdown_generator import MarkdownGenerator
 from ..core.file_manager import FileManager
 from ..utils.logger import get_logger
@@ -14,7 +14,7 @@ class MarkdownService:
         self.file_manager = FileManager(project_path, ignore_file=ignore_file)
         logger.debug("Markdown service initialized")
 
-    def generate_markdown_compilation(self, project_description: str, include_line_numbers: bool = False) -> str:
+    def generate_markdown_compilation(self, project_description: str, files: Optional[list[str]] = None, include_line_numbers: bool = False) -> str:
         logger.debug(f"Generating markdown compilation for project: {self.project_name}")
-        repo_content = self.file_manager.generate_repo_content()
+        repo_content = self.file_manager.generate_repo_content(files)
         return MarkdownGenerator.generate_project_compilation(project_description, repo_content, include_line_numbers)
