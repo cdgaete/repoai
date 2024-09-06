@@ -57,6 +57,9 @@ class ProjectModificationTask(BaseTask):
         messages.append(assistant_message)
 
         context['messages'] = messages
+        context['user_input'] = ""
+        context['file_contexts'] = []
+        context['image_contexts'] = []
 
         # Extract modifications from the response
         context['modifications'] = self._extract_modifications(response.content)
