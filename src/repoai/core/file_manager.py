@@ -66,11 +66,18 @@ class FileManager:
         full_path = self.project_path / file_path
         if full_path.exists():
             if not is_text_file(str(full_path)):
-                logger.warning(f"File {file_path} is not a text file and cannot be displayed.")
+                logger.debug(f"File {file_path} is not a text file and cannot be displayed.")
                 return "This file is not a text file and cannot be displayed."
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return content
+            try:
+                with open(full_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                return content
+            except UnicodeDecodeError as e:
+                logger.debug(f"Failed to read file UnicodeDecodeError {file_path}: {str(e)}")
+                return "This file is not a text file and cannot be displayed."
+            except Exception as e:
+                logger.debug(f"Failed to read file {file_path}: {str(e)}")
+                return "This file is not a text file and cannot be displayed."
         logger.warning(f"File {file_path} not found or couldn't be read.")
         return "File not found or couldn't be read."
 
@@ -145,18 +152,6 @@ class FileManager:
         for file_path in files:
             complete_file_path = self.project_path / file_path
             if complete_file_path.is_dir():
-                continue
-
-            if complete_file_path.is_symlink():
-                logger.warning(f"File {file_path} is a symbolic link and cannot be included in the context report.")
-                continue
-
-            if not complete_file_path.exists():
-                logger.warning(f"File {file_path} does not exist and cannot be included in the context report.")
-                continue
-
-            if not is_text_file(str(complete_file_path)):
-                logger.warning(f"File {file_path} is not a text file and cannot be included in the context report.")
                 continue
 
             repo_content["content"][file_path] = self.read_file(file_path)

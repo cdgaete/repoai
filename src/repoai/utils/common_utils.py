@@ -5,7 +5,7 @@ import string
 import chardet
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict, Any
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -130,10 +130,6 @@ def yaml_multiline_string_presenter(dumper, data):
 
 def get_formated_datetime() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
-
-
-from typing import Dict, Any, List
-import re
 
 def lines_lstrip_backticks_with_indices(content: str) -> tuple[List[str], list[int]]:
     lines = content.split('\n')
