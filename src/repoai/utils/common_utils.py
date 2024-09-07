@@ -3,6 +3,10 @@ import re
 import fnmatch
 import string
 import chardet
+import base64
+from PIL import Image
+import io
+import imghdr
 from datetime import datetime
 from pathlib import Path
 from typing import List, Union, Tuple, Dict, Any
@@ -209,3 +213,67 @@ def extract_outer_code_block(content: str):
     outer_content = '\n'.join(outer_lines[1:-1])
     
     return outer_lang, outer_content
+
+def image_to_base64(image_input):
+    # Function to get MIME type
+    def get_mime_type(format):
+        mime_types = {
+            "jpeg": "image/jpeg",
+            "jpg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "webp": "image/webp",
+            "svg": "image/svg+xml"
+        }
+        return mime_types.get(format.lower(), "application/octet-stream")
+
+    # Handle SVG separately
+    def handle_svg(data):
+        encoded_string = base64.b64encode(data).decode('utf-8')
+        return "data:image/svg+xml;base64," + encoded_string
+
+    # Function to process image data
+    def process_image(img_data, format=None):
+        img = Image.open(img_data)
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        
+        if not format:
+            format = img.format.lower()
+        
+        buffer = io.BytesIO()
+        img.save(buffer, format=format.upper())
+        encoded_string = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        mime_type = get_mime_type(format)
+        return f"data:{mime_type};base64,{encoded_string}"
+
+    # Main logic
+    if isinstance(image_input, (str, Path)):
+        # It's a file path
+        file_path = Path(image_input)
+        file_format = file_path.suffix.lower()[1:]
+        
+        with open(file_path, "rb") as image_file:
+            if file_format == "svg":
+                return handle_svg(image_file.read())
+            else:
+                return process_image(image_file, file_format)
+    
+    elif hasattr(image_input, 'read'):
+        # It's a file-like object
+        image_input.seek(0)
+        data = image_input.read()
+        
+        # Check if it's SVG
+        if data.startswith(b'<?xml') or data.startswith(b'<svg'):
+            return handle_svg(data)
+        
+        # For other formats, use imghdr to detect the format
+        format = imghdr.what(None, h=data)
+        if not format:
+            raise ValueError("Unrecognized image format")
+        
+        return process_image(io.BytesIO(data), format)
+    
+    else:
+        raise ValueError("Input must be a file path or a file-like object")

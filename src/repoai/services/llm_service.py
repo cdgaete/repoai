@@ -1,10 +1,11 @@
-import base64
 from typing import Dict, List, Any, Union, AsyncGenerator
+from pathlib import Path
 from litellm import completion, supports_vision, acompletion
 from litellm.utils import get_llm_provider
 from ..core.config_manager import ConfigManager
 from ..utils.response_wrapper import ResponseRepoAI
 from ..utils.token_counter import TokenCounter
+from ..utils.common_utils import image_to_base64
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -71,12 +72,17 @@ class LLMService:
             if image_url.startswith(('http://', 'https://')):
                 return {'url': image_url}
             else:
-                return {'url': f"data:image/jpeg;base64,{self._encode_image(image_url)}"}
-        return image_url
+                return {'url': image_to_base64(image_url)}
+        elif isinstance(image_url, Path):
+            return {'url': image_to_base64(image_url)}
+        elif hasattr(image_url, 'read'):
+            return {'url': image_to_base64(image_url)}
+        elif isinstance(image_url, dict):
+            return image_url
+        else:
+            raise ValueError(f"Invalid image URL: {image_url}")
 
-    def _encode_image(self, image_path: str) -> str:
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
+
 
     def _handle_anthropic_specific_features(self, kwargs: Dict[str, Any], messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         use_prompt_caching = kwargs.pop('use_prompt_caching', False)

@@ -4,6 +4,7 @@ from ...core.project_manager import ProjectManager
 from ...services.markdown_service import MarkdownService
 from ...services.llm_service import LLMService
 from ...services.progress_service import ProgressService
+from ...utils.common_utils import image_to_base64
 from ...utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -56,11 +57,7 @@ class ProjectModificationWorkflow(BaseWorkflow):
     def _process_image_contexts(self, image_contexts: List[str]) -> List[Dict[str, Dict[str, str]]]:
         processed_contexts = []
         for image_path in image_contexts:
-            processed_contexts.append({
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{self._encode_image(image_path)}"
-                }
-            })
+            processed_contexts.append({"image_url": {"url": image_to_base64(image_path)}})
         return processed_contexts
 
     def _encode_image(self, image_path: str) -> str:
