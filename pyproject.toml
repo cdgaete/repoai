@@ -20,7 +20,8 @@ dependencies = [
     "chardet",
     "docker",
     "litellm",
-    "rich"
+    "rich",
+    "Pillow"
 ]
 
 dynamic = ["version"]
