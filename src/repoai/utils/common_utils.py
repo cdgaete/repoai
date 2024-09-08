@@ -242,7 +242,7 @@ def image_to_base64(image_input):
             format = img.format.lower()
         
         buffer = io.BytesIO()
-        img.save(buffer, format=format.upper())
+        img.save(buffer, format='JPEG' if format.lower() == 'jpg' else format.upper())
         encoded_string = base64.b64encode(buffer.getvalue()).decode('utf-8')
         mime_type = get_mime_type(format)
         return f"data:{mime_type};base64,{encoded_string}"
