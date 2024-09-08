@@ -25,7 +25,7 @@ class ProjectModificationTask(BaseTask):
         user_input = context.get('user_input', '')
         file_contexts = context.get('file_contexts', [])
         image_contexts = context.get('image_contexts', [])
-        logger.debug("file_contexts", file_contexts, "task")
+        logger.debug(f"file_contexts {file_contexts} in task")
 
         if not messages:
             system_message = self._get_system_message()
