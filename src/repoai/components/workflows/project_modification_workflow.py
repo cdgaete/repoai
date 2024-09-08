@@ -32,7 +32,7 @@ class ProjectModificationWorkflow(BaseWorkflow):
     def execute(self, user_input: str, context: Dict[str, Any], file_path_contexts: List[str] = [], image_path_contexts: List[str] = []) -> Dict[str, Any]:
         context['user_input'] = user_input
         if 'file_contexts' in context and context['file_contexts']:
-            print("file_contexts", context['file_contexts', "pass"])
+            logger.debug("file_contexts", context['file_contexts', "pass"])
             pass
         else:
             context['file_contexts'] = self._process_file_contexts(file_path_contexts)
