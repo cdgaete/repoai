@@ -32,6 +32,7 @@ class ProjectModificationWorkflow(BaseWorkflow):
     def execute(self, user_input: str, context: Dict[str, Any], file_path_contexts: List[str] = [], image_path_contexts: List[str] = []) -> Dict[str, Any]:
         context['user_input'] = user_input
         if 'file_contexts' in context and context['file_contexts']:
+            print("file_contexts", context['file_contexts', "pass"])
             pass
         else:
             context['file_contexts'] = self._process_file_contexts(file_path_contexts)
@@ -59,11 +60,6 @@ class ProjectModificationWorkflow(BaseWorkflow):
         for image_path in image_contexts:
             processed_contexts.append({"image_url": {"url": image_to_base64(image_path)}})
         return processed_contexts
-
-    def _encode_image(self, image_path: str) -> str:
-        import base64
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
 
     def apply_modifications(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         modifications = context.get('modifications', [])
