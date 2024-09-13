@@ -26,6 +26,8 @@ class LLMService:
 
         if provider == "anthropic":
             kwargs = self._handle_anthropic_specific_features(kwargs, messages)
+        elif provider == "gemini":
+            kwargs = self._handle_gemini_specific_features(kwargs, messages)
         else:
             kwargs['messages'] = messages
 
@@ -127,6 +129,15 @@ class LLMService:
         kwargs['extra_headers'] = extra_headers
         logger.debug(f"Adding caching headers: {extra_headers}")
         return kwargs
+    
+    def _handle_gemini_specific_features(self, kwargs: Dict[str, Any], messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        use_prompt_caching = kwargs.pop('use_prompt_caching', False)
+        if use_prompt_caching:
+            messages = self._apply_prompt_caching(messages)
+
+        kwargs['messages'] = messages
+        return kwargs
+
 
     def input_validation(self, **kwargs) -> Dict[str, Any]:
         from_config = False

@@ -17,15 +17,13 @@ class ProjectModificationTask(BaseTask):
         self.model_config = model_config
 
     def execute(self, context: Dict[str, Any]) -> None:
-            self._process_chat(context)
-
+        self._process_chat(context)
 
     def _process_chat(self, context: Dict[str, Any]):
         messages = context.get('messages', [])
         user_input = context.get('user_input', '')
         file_contexts = context.get('file_contexts', [])
         image_contexts = context.get('image_contexts', [])
-        logger.debug(f"file_contexts {file_contexts} in task")
 
         if not messages:
             system_message = self._get_system_message()
@@ -62,10 +60,8 @@ class ProjectModificationTask(BaseTask):
         context['file_contexts'] = []
         context['image_contexts'] = []
 
-        # Extract modifications from the response
         context['modifications'] = self._extract_modifications(response.content)
 
-        # Save progress after each interaction
         self.progress_service.save_progress("project_modification", context)
 
     def _get_system_message(self) -> str:
@@ -136,7 +132,6 @@ Remember:
                 match = re.match(operation_pattern, stripped_line)
                 if match:
                     if content_lines and modifications:
-                        # Finalize the previous modification if there's any content
                         self._finalize_modification(modifications[-1], '\n'.join(content_lines))
                         content_lines = []
                     
@@ -160,12 +155,10 @@ Remember:
             else:
                 match = re.match(operation_pattern, stripped_line)
                 if match:
-                    # Finalize the current modification
                     self._finalize_modification(current_modification, '\n'.join(content_lines))
                     content_lines = []
                     current_modification = None
                     
-                    # Start a new modification
                     operation, file_path = match.groups()
                     current_modification = {'operation': operation.lower(), 'file_path': file_path}
 
@@ -184,7 +177,6 @@ Remember:
                 else:
                     content_lines.append(line)
 
-        # Finalize the last modification if there's any
         if current_modification and content_lines:
             self._finalize_modification(current_modification, '\n'.join(content_lines))
 
@@ -211,19 +203,15 @@ Remember:
                 if extracted_content:
                     modification['content'] = extracted_content.strip()
                 else:
-                    # If no code block is found, use the entire content
                     modification['content'] = content.strip()
-                # Add language information if available
                 if lang:
                     modification['language'] = lang
                 else:
                     modification['language'] = 'unknown'
                     
         elif modification['operation'] == 'delete':
-            # No additional processing needed for delete operations
             pass
         elif modification['operation'] == 'move':
-            # Ensure new_path is set for move operations
             if 'new_path' not in modification:
                 raise Exception(f"New path missing for move operation: {modification}")
 
