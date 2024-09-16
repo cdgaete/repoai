@@ -49,11 +49,12 @@ class ProjectModificationInterface(BaseInterface):
                 self.display_output(self.context['project_report'])
                 continue
 
-            file_contexts = self.get_file_contexts()
-            image_contexts = self.get_image_contexts()
+            file_paths = self.get_file_paths()
+            image_paths = self.get_image_paths()
 
             with self.console.status("[bold green]Processing..."):
-                self.context = self.workflow.execute(user_input, self.context, file_contexts, image_contexts)
+                self.context = self.workflow.populate_context(self.context, user_input, self.context['project_report'], file_paths, image_paths)
+                self.context = self.workflow.execute(self.context)
             
             self.display_ai_response()
             self.display_proposed_modifications()
@@ -76,23 +77,23 @@ class ProjectModificationInterface(BaseInterface):
             elif action == 'exit':
                 break
 
-    def get_file_contexts(self) -> List[str]:
-        file_contexts = []
+    def get_file_paths(self) -> List[str]:
+        file_paths = []
         while True:
             file_path = self.handle_input("Enter a file path for context (or press Enter to finish)")
             if file_path.strip() == "":
                 break
-            file_contexts.append(file_path)
-        return file_contexts
+            file_paths.append(file_path)
+        return file_paths
 
-    def get_image_contexts(self) -> List[str]:
-        image_contexts = []
+    def get_image_paths(self) -> List[str]:
+        image_paths = []
         while True:
             image_path = self.handle_input("Enter an image path for context (or press Enter to finish)")
             if image_path.strip() == "":
                 break
-            image_contexts.append(image_path)
-        return image_contexts
+            image_paths.append(image_path)
+        return image_paths
 
     def display_ai_response(self):
         ai_response = self.context['messages'][-1]['content']

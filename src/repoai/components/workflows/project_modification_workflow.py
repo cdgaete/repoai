@@ -29,20 +29,20 @@ class ProjectModificationWorkflow(BaseWorkflow):
             model_config=model_config.get("file_edit_task", {})
         )
 
-    def execute(self, user_input: str, context: Dict[str, Any], file_path_contexts: List[str] = [], image_path_contexts: List[str] = []) -> Dict[str, Any]:
-        context['user_input'] = user_input
-        if 'file_contexts' in context:
-            logger.debug(f"file_contexts: {context['file_contexts']} in workflow")
-            pass
-        else:
-            context['file_contexts'] = self._process_file_contexts(file_path_contexts)
-        if 'image_contexts' in context:
-            logger.debug(f"image_contexts: {context['image_contexts']} in workflow")
-            pass
-        else:
-            context['image_contexts'] = self._process_image_contexts(image_path_contexts)
+    def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self.modification_task.execute(context)
         self.progress_service.save_progress("project_modification", context)
+        return context
+    
+    def populate_context(self, context: Dict[str, Any], user_input: str=None, project_report: str=None, file_paths: List[str]=None, image_paths: List[str]=None) -> Dict[str, Any]:
+        if user_input:
+            context['user_input'] = user_input
+        if project_report:
+            context['project_report'] = project_report
+        if file_paths:
+            context['file_contexts'] = self._process_file_contexts(file_paths)
+        if image_paths:
+            context['image_contexts'] = self._process_image_contexts(image_paths)
         return context
 
     def _process_file_contexts(self, file_contexts: List[str]) -> List[Dict[str, str]]:
