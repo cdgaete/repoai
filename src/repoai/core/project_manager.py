@@ -43,16 +43,13 @@ class ProjectManager:
         
         self.pending_operations: List[Tuple[str, bool, str, Any]] = []
 
-        # Load dynamic modules
         self.tasks = ModuleLoader.load_tasks()
         self.workflows = ModuleLoader.load_workflows()
 
-        # Initialize plugin manager
         plugin_dir = self.config.get('plugin_dir', os.path.join(self.config.user_dir, 'plugins'))
         self.plugin_manager = PluginManager(plugin_dir)
         self.plugin_manager.discover_plugins()
 
-        # Merge built-in modules with plugins
         self.tasks.update(self.plugin_manager.get_tasks())
         self.workflows.update(self.plugin_manager.get_workflows())
 
@@ -123,11 +120,11 @@ class ProjectManager:
             elif operation == 'delete_file':
                 self.delete_file_in_batch(file_path)
             elif operation == 'move_file':
-                self.move_file_in_batch(file_path, content)  # 'content' is the destination path in this case
+                self.move_file_in_batch(file_path, content)
             elif operation == 'create_directory':
-                self.create_directory_in_batch(file_path)  # This does not need to be commited. Operation performs inmediately
+                self.create_directory_in_batch(file_path)
             elif operation == 'delete_directory':
-                files_in_dir = [f for f in files_other_than_create_directory if f.startswith(file_path)]  # Pending files are in the directory being deleted
+                files_in_dir = [f for f in files_other_than_create_directory if f.startswith(file_path)]
                 if files_in_dir:
                     self.execute_pending_operations(f"Automatic commit before deleting directory {file_path}")
                     processed_files.clear()
@@ -138,11 +135,10 @@ class ProjectManager:
 
             processed_files.add(file_path)
 
-        # Handle any remaining operations
         if self.pending_operations:
             self.execute_pending_operations(f"""Operation commit before '{operations[0]["operation"]}' '{operations[0]['file_path']}'""")
 
-    def create_directory_in_batch(self, directory_path: str):  # This does not need to be commited.
+    def create_directory_in_batch(self, directory_path: str):
         self.file_manager.create_directory(directory_path)
 
     def create_file_in_batch(self, file_path: str, content: str):
@@ -189,7 +185,7 @@ class ProjectManager:
             elif operation == 'delete_file':
                 self.file_manager.delete_file(file_path)
             elif operation == 'move_file':
-                self.file_manager.move_file(file_path, content)  # In this case, 'content' is the destination path
+                self.file_manager.move_file(file_path, content)
             elif operation == 'delete_directory':
                 self.file_manager.delete_directory(file_path)
             else:
@@ -233,4 +229,14 @@ class ProjectManager:
             repoaiignore_content = self.config.get('templates', {}).get('repoaiignore', '').strip()
             self.file_manager.save_file(ignore_file, repoaiignore_content)
 
+    def get_prompt(self, task_id: str) -> str:
+        return self.config.get_prompt(task_id)
 
+    def set_custom_prompt(self, task_id: str, prompt: str):
+        self.config.set_custom_prompt(task_id, prompt)
+
+    def reset_prompt(self, task_id: str):
+        self.config.reset_prompt(task_id)
+
+    def list_prompts(self):
+        return self.config.list_prompts()

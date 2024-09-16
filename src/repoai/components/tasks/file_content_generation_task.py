@@ -18,13 +18,13 @@ class FileContentGenerationTask(BaseTask):
     def execute(self, context: dict) -> None:
         project_description = context['report']
         file_list = context['file_paths']
-        
+
         last_state = self.progress_service.get_last_state()
         if last_state:
             generated_files = context.get('generated_files', {})
             generation_history = context.get('generation_history', [])
             last_processed_file = context.get('current_file')
-            
+
             if last_processed_file in file_list:
                 start_index = file_list.index(last_processed_file) + 1
             else:
@@ -42,41 +42,17 @@ class FileContentGenerationTask(BaseTask):
         context['generated_files'] = generated_files
         context['generation_history'] = generation_history
 
-    def _generate_file_contents(self, project_description: str, 
-                                file_list: List[str], 
+    def _generate_file_contents(self, project_description: str,
+                                file_list: List[str],
                                 context: dict,
                                 generated_files: Dict[str, Any],
                                 generation_history: List[Dict[str, Any]]
                                 ) -> Tuple[Dict[str, Any], List[Any], List[Dict[str, Any]]]:
+        system_message = self.llm_service.config.get_prompt('file_content_generation_task')
         messages = [
             {
                 "role": "system",
-                "content": f"""You are an AI assistant specialized in generating file content based on project descriptions. Your responsibilities include:
-
-1. Creating file content that maintains consistency across the project.
-2. Adhering to the overall project structure and requirements.
-3. Generating content for various file types, including but not limited to code files and documentation.
-
-Guidelines for content generation:
-- For non-markdown files, provide only one code block per response.
-- For markdown files, you may include nested code blocks as needed.
-- Adapt your writing style and conventions to match the file type and project requirements.
-- After generating a code block, do not provide explanations.
-- Keep your responses concise and focused on the generated content.
-
-Handling user interactions:
-- The user will provide file names one by one.
-- If the project description or requirements are unclear, do your best to complete the content based on your knowledge.
-- Be prepared to revise content based on user feedback.
-
-Project description:
-
-<Description>
-{project_description}
-</Description>
-
-Remember to maintain a professional tone and prioritize code quality and project coherence in your responses. Focus on generating accurate and relevant content without unnecessary explanations.
-"""
+                "content": f"{system_message}\n\nProject description:\n\n<Description>\n{project_description}\n</Description>"
             }
         ]
 
@@ -109,4 +85,3 @@ Remember to maintain a professional tone and prioritize code quality and project
                 language = "markdown"
 
         return content, messages, language, code
-

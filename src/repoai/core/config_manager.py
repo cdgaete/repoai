@@ -2,7 +2,7 @@ from typing import Literal
 import json
 from pathlib import Path
 import appdirs
-
+from .prompt_manager import PromptManager
 
 class ConfigManager:
     CONFIG_FILE = 'repoai_config.json'
@@ -14,6 +14,7 @@ class ConfigManager:
         self.config_dir = Path(appdirs.user_config_dir("repoai"))
         self.user_dir = Path(appdirs.user_data_dir("repoai"))
         self.load_global_config()
+        self.prompt_manager = None
     
     def load_global_config(self):
         config_file = self.config_dir / self.CONFIG_FILE
@@ -41,12 +42,14 @@ class ConfigManager:
             self.project_config[key] = value
 
     def load_project_config(self, project_path:Path):
+        self.project_path = project_path
         config_file_path = project_path / self.REPOAI_DIR / self.CONFIG_FILE
         if config_file_path.exists():
             with open(config_file_path, 'r') as f:
                 self.project_config = json.load(f)
         else:
             self.project_config = {}
+        self.prompt_manager = PromptManager(self)
 
     def save_project_config(self, project_path:Path):
         config_content = json.dumps(self.project_config, indent=2)
@@ -61,7 +64,7 @@ class ConfigManager:
             'default_model': 'anthropic/claude-3-5-sonnet-20240620',
             'log_level': 'INFO',
             'log_file': str(self.user_dir / 'repoai.log'),
-            'max_log_file_size': 10 * 1024 * 1024,  # 10 MB
+            'max_log_file_size': 10 * 1024 * 1024,
             'log_backup_count': 5,
             'max_commit_history': 10,
             'docker_compose_file': 'docker-compose.yml',
@@ -166,3 +169,21 @@ Thumbs.db
 }
         }
         self.save_global_config()
+
+    def get_prompt(self, task_id: str) -> str:
+        if self.prompt_manager:
+            return self.prompt_manager.get_prompt(task_id)
+        return ''
+
+    def set_custom_prompt(self, task_id: str, prompt: str):
+        if self.prompt_manager:
+            self.prompt_manager.set_custom_prompt(task_id, prompt)
+
+    def reset_prompt(self, task_id: str):
+        if self.prompt_manager:
+            self.prompt_manager.reset_prompt(task_id)
+
+    def list_prompts(self):
+        if self.prompt_manager:
+            return self.prompt_manager.list_prompts()
+        return {}

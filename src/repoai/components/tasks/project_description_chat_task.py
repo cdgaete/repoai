@@ -21,15 +21,7 @@ class ProjectDescriptionChatTask(BaseTask):
     def _process_chat(self, context: dict):
         messages = context.get('messages', [])
         if not messages:
-            system_message = (
-                "You are an AI assistant helping to create a detailed project description called 'project prompt'. "
-                "This project prompt must be written in an instructive style. "
-                "The project prompt must be enclosed with triple backticks. "
-                "After each interaction, update the project prompt to reflect the latest information. "
-                "Ask questions to gather information and provide suggestions. "
-                "The prompt should be a comprehensive description of the project, including its purpose, "
-                "main features, and any technical requirements. "
-            )
+            system_message = self.llm_service.config.get_prompt('project_description_chat_task')
             messages = [
                 {"role": "system", "content": system_message},
             ]
@@ -58,7 +50,6 @@ class ProjectDescriptionChatTask(BaseTask):
         context['user_input'] = ""
         context['description'] = prompt
 
-        # Save progress after each interaction
         self.progress_service.save_progress("project_description", context)
 
     def _extract_description_prompt(self, content: str) -> str:
@@ -66,11 +57,10 @@ class ProjectDescriptionChatTask(BaseTask):
         assert content, "Content cannot be empty"
         prompts = extract_code_blocks(content)
         if prompts:
-            prompt = prompts[0][1].strip()  # Assume the first code block is the prompt
+            prompt = prompts[0][1].strip()
             assert isinstance(prompt, str)
             return prompt, True
         else:
-            # No prompt found
             prompt = content
             logger.warning("No text found in triple backticks in the assistant's response. Using the entire response as the prompt.")
             return prompt, False

@@ -26,7 +26,7 @@ class ProjectModificationTask(BaseTask):
         image_contexts = context.get('image_contexts', [])
 
         if not messages:
-            system_message = self._get_system_message()
+            system_message = self.llm_service.config.get_prompt('project_modification_task')
             messages = [{"role": "system", "content": system_message}]
             project_report = context.get('project_report', '')
             text_message = f"<ProjectReport>\n{project_report}\n</ProjectReport>\n\n{user_input}\n\n"
@@ -63,59 +63,6 @@ class ProjectModificationTask(BaseTask):
         context['modifications'] = self._extract_modifications(response.content)
 
         self.progress_service.save_progress("project_modification", context)
-
-    def _get_system_message(self) -> str:
-        return """You are an AI assistant helping to modify a project. You can suggest creating, editing, deleting, or moving files. Use the following commands, always at the start of a new line:
-
-1. <::CREATE::> path/to/new/file.ext
-   Use for new files only. Follow with the entire file content in a code block.
-
-2. <::EDIT::> path/to/existing/file.ext
-   Use for existing files only. Provide the new content, including unchanged parts.
-   Comment out removed code instead of deleting it.
-
-3. <::DELETE::> path/to/delete/file.ext
-   Use to remove a file. No additional content needed.
-
-4. <::MOVE::> path/to/old/file.ext TO path/to/new/file.ext
-   Use to relocate a file.
-
-Examples:
-
-<::CREATE::> src/new_feature.py
-```python
-def new_function():
-    return "This is a new feature"
-```
-
-<::EDIT::> src/existing_file.py
-```python
-# def old_function():
-#     return "Old functionality"
-
-def updated_function():
-    return "Updated functionality"
-
-# Rest of the unchanged file content...
-```
-
-<::DELETE::> obsolete/old_script.py
-
-<::MOVE::> utils/helper.py TO lib/utilities.py
-
-Provide your response in two parts:
-1. An explanation of the proposed changes.
-2. The modifications using the format described above.
-
-Use command markers only at the start of a line when specifying a modification.
-
-Remember:
-- For <::EDIT::>, provide the full new content of the file.
-- Comment out removed code instead of deleting it.
-- Include unchanged parts of the file in edits.
-- You are aware of the original file contents, so you don't need to show diffs.
-- Do not provide any additional code block apart from the file content.
-"""
 
     def _extract_modifications(self, content: str) -> List[Dict[str, Any]]:
         modifications = []

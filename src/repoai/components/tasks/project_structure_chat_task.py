@@ -21,26 +21,7 @@ class ProjectStructureChatTask(BaseTask):
     def _process_chat(self, context: dict):
         messages = context.get('messages', [])
         if not messages:
-            system_message = (
-                "You are an AI assistant helping to create a project directory structure with a detailed explanation. "
-                "The directory structure should be formatted as a tree-like representation of directories and files and enclosed with triple backticks. "
-                "Next, provide an explanation of the chosen structure and its parts. "
-                "The Root directory should be represented as a single forward slash only. "
-                "After every interaction with the user, provide and update of the project directory structure and the explanation. "
-                "An example of a tree-like representation of a project directory structure is shown below:\n\n"
-            ) + """
-```markdown
-/
-├── dir1/
-│   └── dir2/
-│       └── file1.txt
-└── dir3/
-    ├── file2.txt
-    └── dir4/
-        ├── file3.txt
-        └── file4.txt
-```
-"""
+            system_message = self.llm_service.config.get_prompt('project_structure_chat_task')
             messages = [{"role": "system", "content": system_message}]
             context['messages'] = messages
 
@@ -62,7 +43,6 @@ class ProjectStructureChatTask(BaseTask):
         context['structure_and_explanation'] = response.content
         context['structure'] = self._extract_structure(response.content)
 
-        # Save progress after each interaction
         self.progress_service.save_progress("project_structure", context)
 
     def _extract_structure(self, content):

@@ -24,8 +24,9 @@ class FileEditTask(BaseTask):
         edit_message = context['edit_message']
         if current_content.strip() != edit_message.strip():
             prompt = self._create_edit_prompt(file_path, current_content, edit_message)
+            system_message = self.llm_service.config.get_prompt('file_edit_task')
             messages = [
-                {"role": "system", "content": "You are an AI assistant that helps with editing file contents based on user requests."},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ]
 
@@ -39,7 +40,6 @@ class FileEditTask(BaseTask):
 
         logger.info(f"Edited content: {context['new_content'][:60]}...")
 
-        # Save progress after the edit
         self.progress_service.save_progress("file_edit", context)
 
     def _create_edit_prompt(self, file_path: str, current_content: str, edit_message: str) -> str:
