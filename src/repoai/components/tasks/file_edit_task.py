@@ -23,11 +23,26 @@ class FileEditTask(BaseTask):
         current_content = context['current_content']
         edit_message = context['edit_message']
         if current_content.strip() != edit_message.strip():
-            prompt = self._create_edit_prompt(file_path, current_content, edit_message)
             system_message = self.llm_service.config.get_prompt('file_edit_task')
             messages = [
                 {"role": "system", "content": system_message},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": f"""
+You are tasked with editing the following file: {file_path}
+
+Current content of the file:
+```
+{current_content}
+```
+
+Edit request:
+```
+{edit_message}
+```
+
+Please provide the full updated content of the file that reflects the requested changes.
+Your response should only contain the updated file content, without any additional explanations or formatting.
+Provide the updated file content in triple backticks. Ensure the resulting file content is valid and remove comments if necessary.
+"""}
             ]
 
             response = self.llm_service.get_completion(messages=messages, **self.model_config)
@@ -41,22 +56,3 @@ class FileEditTask(BaseTask):
         logger.info(f"Edited content: {context['new_content'][:60]}...")
 
         self.progress_service.save_progress("file_edit", context)
-
-    def _create_edit_prompt(self, file_path: str, current_content: str, edit_message: str) -> str:
-        return f"""
-You are tasked with editing the following file: {file_path}
-
-Current content of the file:
-```
-{current_content}
-```
-
-Edit request: 
-```
-{edit_message}
-```
-
-Please provide the full updated content of the file that reflects the requested changes.
-Your response should only contain the updated file content, without any additional explanations or formatting.
-Provide the updated file content in triple backticks. Ensure the resulting file content is valid and remove comments if necessary.
-"""

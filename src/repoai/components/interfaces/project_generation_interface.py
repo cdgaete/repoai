@@ -46,7 +46,8 @@ class ProjectGenerationInterface(BaseInterface):
     def project_description_chat(self):
         self.console.print("\n[bold green]Starting project description chat...[/bold green]")
         if not self.context.get('description'):
-            user_input = Prompt.ask("Please provide a brief description of your project")
+            initial_prompt = self.project_manager.get_prompt("project_description_chat_task", "user", "initial")
+            user_input = Prompt.ask(initial_prompt)
             with self.console.status("[bold green]Starting project description chat..."):
                 self.context = self.workflow.description_start(user_input, self.context)
 
@@ -58,7 +59,8 @@ class ProjectGenerationInterface(BaseInterface):
                 default="continue"
             )
             if choice == "continue":
-                user_input = self.handle_input("You")
+                continue_prompt = self.project_manager.get_prompt("project_description_chat_task", "user", "continue")
+                user_input = self.handle_input(continue_prompt)
                 self.context['user_input'] = user_input
                 with self.console.status("[bold Thinking..."):
                     self.context = self.workflow.execute_description_task(self.context)
@@ -69,7 +71,8 @@ class ProjectGenerationInterface(BaseInterface):
                 return self.project_structure_chat()
             elif choice == "reset":
                 self.console.print("[yellow]Resetting context...[/yellow]\n")
-                user_input = self.handle_input("Please provide a brief description of your project")
+                initial_prompt = self.project_manager.get_prompt("project_description_chat_task", "user", "initial")
+                user_input = self.handle_input(initial_prompt)
                 with self.console.status("[bold green]Restarting chat..."):
                     self.context = self.workflow.description_start(user_input)
             elif choice == "exit":
@@ -89,7 +92,8 @@ class ProjectGenerationInterface(BaseInterface):
                 default="continue"
             )
             if choice == "continue":
-                user_input = self.handle_input("You")
+                continue_prompt = self.project_manager.get_prompt("project_structure_chat_task", "user", "continue")
+                user_input = self.handle_input(continue_prompt)
                 self.context['user_input'] = user_input
             elif choice == "apply":
                 return self.finalize_project()

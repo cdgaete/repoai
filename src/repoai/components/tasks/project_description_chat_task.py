@@ -37,7 +37,7 @@ class ProjectDescriptionChatTask(BaseTask):
                 raise Exception("No user input provided")
 
         response = self.llm_service.get_completion(messages=messages, **self.model_config)
-        
+
         prompt, found = self._extract_description_prompt(response.content)
         if not found:
             assistant_content = response.content + "\n\n **Description Not Found**"
