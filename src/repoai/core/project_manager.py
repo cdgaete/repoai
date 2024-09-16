@@ -218,7 +218,7 @@ class ProjectManager:
         if self.file_exists('.gitignore'):
             logger.debug("Gitignore already exists. Skipping generation.")
         else:
-            gitignore_content = self.config.get('templates', {}).get('gitignore', '').strip()
+            gitignore_content = self.config.render_template('gitignore', repoai_dir=self.config.REPOAI_DIR)
             self.file_manager.save_file('.gitignore', gitignore_content)
 
     def generate_repoaiignore(self):
@@ -226,7 +226,7 @@ class ProjectManager:
         if self.file_exists(ignore_file):
             logger.debug("Repoaiignore already exists. Skipping generation.")
         else:
-            repoaiignore_content = self.config.get('templates', {}).get('repoaiignore', '').strip()
+            repoaiignore_content = self.config.render_template('repoaiignore', repoai_dir=self.config.REPOAI_DIR)
             self.file_manager.save_file(ignore_file, repoaiignore_content)
 
     def get_prompt(self, task_id: str) -> str:

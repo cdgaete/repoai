@@ -1,7 +1,9 @@
-from typing import Literal
 import json
 from pathlib import Path
 import appdirs
+from jinja2 import Environment, FileSystemLoader
+from importlib import resources
+import yaml
 from .prompt_manager import PromptManager
 
 class ConfigManager:
@@ -15,6 +17,7 @@ class ConfigManager:
         self.user_dir = Path(appdirs.user_data_dir("repoai"))
         self.load_global_config()
         self.prompt_manager = None
+        self.jinja_env = Environment(loader=FileSystemLoader(str(Path(__file__).parent)))
     
     def load_global_config(self):
         config_file = self.config_dir / self.CONFIG_FILE
@@ -60,114 +63,8 @@ class ConfigManager:
             f.write(config_content)
 
     def set_default_global_config(self):
-        self.global_config = {
-            'default_model': 'anthropic/claude-3-5-sonnet-20240620',
-            'log_level': 'INFO',
-            'log_file': str(self.user_dir / 'repoai.log'),
-            'max_log_file_size': 10 * 1024 * 1024,
-            'log_backup_count': 5,
-            'max_commit_history': 10,
-            'docker_compose_file': 'docker-compose.yml',
-            'global_token_usage_file': str(self.user_dir / 'global_token_usage.json'),
-            'project_token_usage_file': str(Path(self.REPOAI_DIR) /'token_usage.json'),
-            'repoai_ignore_file': str(Path(self.REPOAI_DIR) / '.repoaiignore'),
-            'prompt_cache_threshold': 20000,
-            'plugin_dir': str(self.user_dir / 'plugins'),
-            'templates': {
-                    'gitignore': """
-# RepoAI
-.repoai/
-
-# Environments
-.env
-.venv
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.venv/
-.pytest_cache/
-
-# node
-node_modules/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-""",
-                    'repoaiignore': """
-.repoai/
-
-# Ignore version control directories
-.git/
-**/.git/
-.svn/
-.hg/
-.gitignore
-
-# Ignore build outputs
-build/
-**/build/
-dist/
-**/dist/
-*.egg-info/
-*/*.egg-info/
-
-# Ignore log files
-*.log
-
-# Ignore environment files
-.env
-env/
-
-# Python
-__pycache__/
-**/__pycache__/
-.pytest_cache/
-**/.pytest_cache/
-.cache/
-*.py[cod]
-*$py.class
-venv/
-**/venv/
-.venv/
-**/.venv/
-
-# node
-node_modules/
-**/node_modules/
-package-lock.json
-**/package-lock.json
-
-# Ignore IDE specific files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Ignore OS generated files
-.DS_Store
-Thumbs.db
-"""
-}
-        }
+        with resources.open_text("repoai.core", "default_config.yaml") as f:
+            self.global_config = yaml.safe_load(f)
         self.save_global_config()
 
     def get_prompt(self, task_id: str) -> str:
@@ -187,3 +84,7 @@ Thumbs.db
         if self.prompt_manager:
             return self.prompt_manager.list_prompts()
         return {}
+
+    def render_template(self, template_name: str, **kwargs):
+        template = self.jinja_env.get_template(f"{template_name}.j2")
+        return template.render(**kwargs)
