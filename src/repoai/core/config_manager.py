@@ -4,6 +4,7 @@ import appdirs
 from jinja2 import Environment, FileSystemLoader
 from importlib import resources
 import yaml
+from typing import Dict, Any
 from .prompt_manager import PromptManager
 
 class ConfigManager:
@@ -106,3 +107,19 @@ class ConfigManager:
         if self.prompt_manager:
             return self.prompt_manager.list_interface_prompts()
         return {}
+
+    def get_model_config(self) -> Dict[str, Any]:
+        return self.project_config.get('model_config', {})
+
+    def update_model_config(self, config: Dict[str, Any]):
+        self.project_config['model_config'] = config
+        self.save_project_config(self.project_path)
+
+    def get_default_prompts(self) -> Dict[str, Dict[str, str]]:
+        return self.prompt_manager.get_default_prompts()
+
+    def update_custom_prompts(self, prompts: Dict[str, Dict[str, str]]):
+        for task_id, prompt_data in prompts.items():
+            self.prompt_manager.set_custom_llm_prompt(task_id, prompt_data['system'], 'system')
+            self.prompt_manager.set_custom_llm_prompt(task_id, prompt_data['user'], 'user')
+        self.save_project_config(self.project_path)

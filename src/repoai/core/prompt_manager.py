@@ -31,9 +31,21 @@ class PromptManager:
         with resources.open_text("repoai.resources.prompts", "interface_prompts.yaml") as f:
             return yaml.safe_load(f)
 
+    def get_default_prompts(self) -> Dict[str, Dict[str, str]]:
+        default_prompts = {}
+        for task_id in self.default_prompts.keys():
+            default_prompts[task_id] = {
+                'system': self.get_llm_prompt(task_id, 'system'),
+                'user': self.get_llm_prompt(task_id, 'user')
+            }
+        return default_prompts
+
     def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
         custom_prompt = self.custom_prompts.get(task_id, {}).get(prompt_type)
-        prompt_template = custom_prompt or self.default_prompts.get(task_id, {}).get(prompt_type, '')
+        if custom_prompt:
+            return custom_prompt
+        
+        prompt_template = self.default_prompts.get(task_id, {}).get(prompt_type, '')
         template = self.jinja_env.from_string(prompt_template)
         return template.render(**kwargs)
 
