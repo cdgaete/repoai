@@ -21,7 +21,9 @@ dependencies = [
     "docker",
     "litellm",
     "rich",
-    "Pillow"
+    "Pillow",
+    "pyyaml",
+    "jinja2"
 ]
 
 dynamic = ["version"]
@@ -38,6 +40,9 @@ dev = [
 where = ["src"]
 include = ["repoai*"]
 namespaces = false
+
+[tool.setuptools.package-data]
+"repoai.core" = ["*.yaml", "*.j2"]
 
 [tool.setuptools.dynamic]
 version = { attr = "repoai.__version__" }
