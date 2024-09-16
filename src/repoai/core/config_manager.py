@@ -17,7 +17,7 @@ class ConfigManager:
         self.user_dir = Path(appdirs.user_data_dir("repoai"))
         self.load_global_config()
         self.prompt_manager = None
-        self.jinja_env = Environment(loader=FileSystemLoader(str(Path(__file__).parent)))
+        self.jinja_env = Environment(loader=FileSystemLoader(str(Path(__file__).parent.parent / 'resources' / 'templates')))
     
     def load_global_config(self):
         config_file = self.config_dir / self.CONFIG_FILE
@@ -63,7 +63,7 @@ class ConfigManager:
             f.write(config_content)
 
     def set_default_global_config(self):
-        with resources.open_text("repoai.core", "default_config.yaml") as f:
+        with resources.open_text("repoai.resources.config", "default_config.yaml") as f:
             self.global_config = yaml.safe_load(f)
         self.save_global_config()
 
@@ -73,12 +73,12 @@ class ConfigManager:
 
     def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
         if self.prompt_manager:
-            return self.prompt_manager.get_llm_prompt(task_id, prompt_type, **kwargs)
+            return self.prompt_manager.get_llm_prompt(task_id=task_id, prompt_type=prompt_type, **kwargs)
         return ''
 
     def get_interface_prompt(self, task_id: str, prompt_key: str, **kwargs) -> str:
         if self.prompt_manager:
-            return self.prompt_manager.get_interface_prompt(task_id, prompt_key, **kwargs)
+            return self.prompt_manager.get_interface_prompt(task_id=task_id, prompt_key=prompt_key, **kwargs)
         return ''
 
     def set_custom_llm_prompt(self, task_id: str, prompt: str, prompt_type: str = 'system'):

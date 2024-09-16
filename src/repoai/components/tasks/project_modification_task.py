@@ -26,7 +26,7 @@ class ProjectModificationTask(BaseTask):
         image_contexts = context.get('image_contexts', [])
 
         if not messages:
-            system_message = self.llm_service.config.get_prompt('project_modification_task')
+            system_message = self.llm_service.config.get_llm_prompt(task_id='project_modification_task', prompt_type='system')
             messages = [{"role": "system", "content": system_message}]
             project_report = context.get('project_report', '')
             text_message = f"<ProjectReport>\n{project_report}\n</ProjectReport>\n\n{user_input}\n\n"

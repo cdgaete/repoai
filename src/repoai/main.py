@@ -47,6 +47,7 @@ def handle_project_actions(args):
         model_config = load_model_config(args.model_config)
     else:
         model_config = {}
+        
     if args.action == 'create':
         project_manager = ProjectManager(args.project_path, create_if_not_exists=True, error_if_exists=False)
         generation_interface = ProjectGenerationInterface(project_manager, model_config)

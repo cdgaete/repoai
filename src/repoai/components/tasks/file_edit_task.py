@@ -9,40 +9,23 @@ logger = get_logger(__name__)
 
 
 class FileEditTask(BaseTask):
-    def __init__(self, llm_service: LLMService, progress_service: ProgressService, model_config: Dict[str, Any]={}):
+    def __init__(self, llm_service: LLMService, progress_service: ProgressService, model_config: Dict[str, Any] = {}):
         super().__init__()
         self.llm_service = llm_service
         self.progress_service = progress_service
         self.model_config = model_config
 
     def execute(self, context: Dict[str, Any]) -> None:
-        self._process_edit(context)
-
-    def _process_edit(self, context: Dict[str, Any]):
         file_path = context['file_path']
         current_content = context['current_content']
         edit_message = context['edit_message']
         if current_content.strip() != edit_message.strip():
-            system_message = self.llm_service.config.get_prompt('file_edit_task')
+            system_prompt = self.llm_service.config.get_llm_prompt(task_id='file_edit_task', prompt_type='system')
+            user_prompt = self.llm_service.config.get_llm_prompt(
+                task_id='file_edit_task', prompt_type='user', file_path=file_path, current_content=current_content, edit_message=edit_message)
             messages = [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"""
-You are tasked with editing the following file: {file_path}
-
-Current content of the file:
-```
-{current_content}
-```
-
-Edit request:
-```
-{edit_message}
-```
-
-Please provide the full updated content of the file that reflects the requested changes.
-Your response should only contain the updated file content, without any additional explanations or formatting.
-Provide the updated file content in triple backticks. Ensure the resulting file content is valid and remove comments if necessary.
-"""}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
             ]
 
             response = self.llm_service.get_completion(messages=messages, **self.model_config)

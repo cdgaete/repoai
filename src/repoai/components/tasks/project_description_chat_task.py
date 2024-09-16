@@ -16,20 +16,20 @@ class ProjectDescriptionChatTask(BaseTask):
         self.model_config = model_config or {}
 
     def execute(self, context: dict) -> None:
-        self._process_chat(context)
-
-    def _process_chat(self, context: dict):
         messages = context.get('messages', [])
+        user_input = context.get('user_input')
+        
         if not messages:
-            system_message = self.llm_service.config.get_prompt('project_description_chat_task')
+            system_prompt = self.llm_service.config.get_llm_prompt(task_id='project_description_chat_task', prompt_type='system')
             messages = [
-                {"role": "system", "content": system_message},
+                {"role": "system", "content": system_prompt},
             ]
             context['messages'] = messages
 
-        user_input = context.get('user_input')
         if user_input:
-            messages.append({"role": "user", "content": user_input})
+            user_prompt = self.llm_service.config.get_llm_prompt(
+                task_id='project_description_chat_task', prompt_type='user', project_info=user_input)
+            messages.append({"role": "user", "content": user_prompt})
         else:
             if messages[-1]['role'] == 'user':
                 pass

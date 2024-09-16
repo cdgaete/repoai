@@ -48,16 +48,16 @@ class FileContentGenerationTask(BaseTask):
                                 generated_files: Dict[str, Any],
                                 generation_history: List[Dict[str, Any]]
                                 ) -> Tuple[Dict[str, Any], List[Any], List[Dict[str, Any]]]:
-        system_message = self.llm_service.config.get_prompt('file_content_generation_task')
+        system_message = self.llm_service.config.get_llm_prompt(task_id='file_content_generation_task', prompt_type='system')
         messages = [
             {
                 "role": "system",
-                "content": f"{system_message}\n\nProject description:\n\n<Description>\n{project_description}\n</Description>"
+                "content": system_message
             }
         ]
 
         for file_path in file_list:
-            file_content, messages, language, code = self._generate_single_file_content(file_path, messages)
+            file_content, messages, language, code = self._generate_single_file_content(file_path, messages, project_description)
             generation_history.append(dict(file_path=file_path, file_content=file_content, language=language, code=code))
             generated_files[file_path] = [language, code]
 
@@ -69,9 +69,9 @@ class FileContentGenerationTask(BaseTask):
 
         return generated_files, generation_history
 
-    def _generate_single_file_content(self, file_path: str, messages: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]], str, str, List[int], bool, bool]:
-        prompt = f"Generate the content for the file: {file_path}"
-        messages.append({"role": "user", "content": prompt})
+    def _generate_single_file_content(self, file_path: str, messages: List[Dict[str, str]], project_description: str) -> Tuple[str, List[Dict[str, str]], str, str, List[int], bool, bool]:
+        user_prompt = self.llm_service.config.get_llm_prompt(task_id='file_content_generation_task', prompt_type='user', file_path=file_path, project_description=project_description)
+        messages.append({"role": "user", "content": user_prompt})
 
         response = self.llm_service.get_completion(messages=messages, **self.model_config)
         content = response.content

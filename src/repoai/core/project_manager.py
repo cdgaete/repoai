@@ -229,14 +229,26 @@ class ProjectManager:
             repoaiignore_content = self.config.render_template('repoaiignore', repoai_dir=self.config.REPOAI_DIR)
             self.file_manager.save_file(ignore_file, repoaiignore_content)
 
-    def get_prompt(self, task_id: str) -> str:
-        return self.config.get_prompt(task_id)
+    def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
+        return self.config.get_llm_prompt(task_id=task_id, prompt_type=prompt_type, **kwargs)
 
-    def set_custom_prompt(self, task_id: str, prompt: str):
-        self.config.set_custom_prompt(task_id, prompt)
+    def get_interface_prompt(self, task_id: str, prompt_key: str, **kwargs) -> str:
+        return self.config.get_interface_prompt(task_id=task_id, prompt_key=prompt_key, **kwargs)
 
-    def reset_prompt(self, task_id: str):
-        self.config.reset_prompt(task_id)
+    def set_custom_llm_prompt(self, task_id: str, prompt: str, prompt_type: str = 'system'):
+        self.config.set_custom_llm_prompt(task_id, prompt, prompt_type)
 
-    def list_prompts(self):
-        return self.config.list_prompts()
+    def set_interface_prompt(self, task_id: str, prompt_key: str, prompt: str):
+        self.config.set_interface_prompt(task_id, prompt_key, prompt)
+
+    def reset_llm_prompt(self, task_id: str, prompt_type: str = 'system'):
+        self.config.reset_llm_prompt(task_id, prompt_type)
+
+    def reset_interface_prompt(self, task_id: str, prompt_key: str):
+        self.config.reset_interface_prompt(task_id, prompt_key)
+
+    def list_llm_prompts(self):
+        return self.config.list_llm_prompts()
+
+    def list_interface_prompts(self):
+        return self.config.list_interface_prompts()

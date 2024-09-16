@@ -42,7 +42,9 @@ include = ["repoai*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-"repoai.resources" = ["*.yaml", "*.j2"]
+"repoai.resources.config" = ["*.yaml"]
+"repoai.resources.prompts" = ["*.yaml"]
+"repoai.resources.templates" = ["*.j2"]
 
 [tool.setuptools.dynamic]
 version = { attr = "repoai.__version__" }

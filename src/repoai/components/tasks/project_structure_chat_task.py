@@ -9,25 +9,25 @@ logger = get_logger(__name__)
 
 
 class ProjectStructureChatTask(BaseTask):
-    def __init__(self, llm_service: LLMService, progress_service: ProgressService, model_config: Dict[str, Any]={}):
+    def __init__(self, llm_service: LLMService, progress_service: ProgressService, model_config: Dict[str, Any] = {}):
         super().__init__()
         self.llm_service = llm_service
         self.progress_service = progress_service
         self.model_config = model_config
 
     def execute(self, context: dict) -> None:
-        self._process_chat(context)
-
-    def _process_chat(self, context: dict):
         messages = context.get('messages', [])
+        user_input = context.get('user_input')
+
         if not messages:
-            system_message = self.llm_service.config.get_prompt('project_structure_chat_task')
+            system_message = self.llm_service.config.get_llm_prompt(task_id='project_structure_chat_task', prompt_type='system')
             messages = [{"role": "system", "content": system_message}]
             context['messages'] = messages
 
-        user_input = context.get('user_input')
         if user_input:
-            messages.append({"role": "user", "content": user_input})
+            user_prompt = self.llm_service.config.get_llm_prompt(
+                task_id='project_structure_chat_task', prompt_type='user', project_description=user_input)
+            messages.append({"role": "user", "content": user_prompt})
         else:
             if messages[-1]['role'] == 'user':
                 pass

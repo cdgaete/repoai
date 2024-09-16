@@ -39,7 +39,8 @@ class ProjectModificationInterface(BaseInterface):
         Initial_tokens = token_counter(model=self.model_config.get('project_modification_workflow', {}).get('project_modification_task', {}).get('model', ''), text=self.context['project_report'])
         self.console.print(f"[bold]Project report tokens:[/bold] {Initial_tokens}")
         while True:
-            user_input = self.handle_input("Describe what you want to do (or 'exit' to quit or 'reset' to start over) press Enter twice to submit:")
+            initial_prompt = self.project_manager.get_interface_prompt(task_id="project_modification_task", prompt_key="initial")
+            user_input = self.handle_input(initial_prompt)
             
             if user_input.strip().lower() == 'exit':
                 break
@@ -57,8 +58,9 @@ class ProjectModificationInterface(BaseInterface):
             self.display_ai_response()
             self.display_proposed_modifications()
 
+            continue_prompt = self.project_manager.get_interface_prompt(task_id="project_modification_task", prompt_key="continue")
             action = self.handle_input(
-                "What would you like to do?",
+                continue_prompt,
                 choices=["apply", "continue", "reset", "exit"],
                 default="continue"
             )

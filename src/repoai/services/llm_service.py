@@ -84,8 +84,6 @@ class LLMService:
         else:
             raise ValueError(f"Invalid image URL: {image_url}")
 
-
-
     def _handle_anthropic_specific_features(self, kwargs: Dict[str, Any], messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         use_prompt_caching = kwargs.pop('use_prompt_caching', False)
         if use_prompt_caching:
@@ -137,7 +135,6 @@ class LLMService:
 
         kwargs['messages'] = messages
         return kwargs
-
 
     def input_validation(self, **kwargs) -> Dict[str, Any]:
         from_config = False

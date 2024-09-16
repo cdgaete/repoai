@@ -20,12 +20,10 @@ class ProjectGenerationInterface(BaseInterface):
         self.workflow = self.project_manager.get_workflow("project_generation_workflow")(self.progress_service, model_config.get("project_generation_workflow", {}))
         self.context = {}
 
-
     def run(self):
         self.console.print("[bold green]Starting project generation...[/bold green]")
         self.manage_context()
         self.run_project_generation_workflow()
-
 
     def manage_context(self):
         last_state = self.progress_service.get_last_state()
@@ -36,17 +34,14 @@ class ProjectGenerationInterface(BaseInterface):
                 return
         self.context = {}
 
-
     def run_project_generation_workflow(self):
         self.context = self.project_description_chat()
         return
 
-
-
     def project_description_chat(self):
         self.console.print("\n[bold green]Starting project description chat...[/bold green]")
         if not self.context.get('description'):
-            initial_prompt = self.project_manager.get_prompt("project_description_chat_task", "user", "initial")
+            initial_prompt = self.project_manager.get_interface_prompt(task_id="project_description_chat_task", prompt_key="initial")
             user_input = Prompt.ask(initial_prompt)
             with self.console.status("[bold green]Starting project description chat..."):
                 self.context = self.workflow.description_start(user_input, self.context)
@@ -59,7 +54,7 @@ class ProjectGenerationInterface(BaseInterface):
                 default="continue"
             )
             if choice == "continue":
-                continue_prompt = self.project_manager.get_prompt("project_description_chat_task", "user", "continue")
+                continue_prompt = self.project_manager.get_interface_prompt(task_id="project_description_chat_task", prompt_key="continue")
                 user_input = self.handle_input(continue_prompt)
                 self.context['user_input'] = user_input
                 with self.console.status("[bold Thinking..."):
@@ -67,18 +62,17 @@ class ProjectGenerationInterface(BaseInterface):
             elif choice == "apply":
                 user_input = self.context["description"]
                 self.context = self.workflow.reset_chat_context(self.context)
-                self.context["user_input"] = user_input  # Passing the prompt to the next task
+                self.context["user_input"] = user_input
                 return self.project_structure_chat()
             elif choice == "reset":
                 self.console.print("[yellow]Resetting context...[/yellow]\n")
-                initial_prompt = self.project_manager.get_prompt("project_description_chat_task", "user", "initial")
+                initial_prompt = self.project_manager.get_interface_prompt(task_id="project_description_chat_task", prompt_key="initial")
                 user_input = self.handle_input(initial_prompt)
                 with self.console.status("[bold green]Restarting chat..."):
                     self.context = self.workflow.description_start(user_input)
             elif choice == "exit":
                 self.console.print("[yellow]Exiting project...[/yellow]")
                 return None
-
 
     def project_structure_chat(self):
         self.console.print("\n[bold green]Starting project structure chat...[/bold green]")
@@ -92,7 +86,7 @@ class ProjectGenerationInterface(BaseInterface):
                 default="continue"
             )
             if choice == "continue":
-                continue_prompt = self.project_manager.get_prompt("project_structure_chat_task", "user", "continue")
+                continue_prompt = self.project_manager.get_interface_prompt(task_id="project_structure_chat_task", prompt_key="continue")
                 user_input = self.handle_input(continue_prompt)
                 self.context['user_input'] = user_input
             elif choice == "apply":
@@ -104,7 +98,6 @@ class ProjectGenerationInterface(BaseInterface):
             elif choice == "exit":
                 self.console.print("[yellow]Exiting project...[/yellow]")
                 return None
-
 
     def finalize_project(self):
         self.console.print("\n[bold green]Finalizing project...[/bold green]")
@@ -125,7 +118,6 @@ class ProjectGenerationInterface(BaseInterface):
 
         self.progress_service.clear_progress()
         return self.context
-
 
     def resume_workflow(self):
         with Progress(
@@ -150,10 +142,8 @@ class ProjectGenerationInterface(BaseInterface):
             self.console.print("[yellow]Unknown last step. Starting from the beginning.[/yellow]")
             return self.run_project_generation_workflow()
 
-
     def display_output(self, output):
         self.console.print(Panel(Markdown(output), title="Assistant", border_style="blue"))
-
 
     def handle_input(self, prompt, **kwargs):
         return Prompt.ask(prompt, **kwargs)

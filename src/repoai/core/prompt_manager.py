@@ -3,7 +3,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 from importlib import resources
-from jinja2 import Environment, BaseLoader
+from jinja2 import Environment, FileSystemLoader
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -14,10 +14,10 @@ class PromptManager:
         self.default_prompts = self._load_default_prompts()
         self.custom_prompts = self._load_custom_prompts()
         self.interface_prompts = self._load_interface_prompts()
-        self.jinja_env = Environment(loader=BaseLoader())
+        self.jinja_env = Environment(loader=FileSystemLoader(str(Path(__file__).parent.parent / 'resources' / 'prompts')))
 
     def _load_default_prompts(self) -> Dict[str, Any]:
-        with resources.open_text("repoai.core", "default_prompts.yaml") as f:
+        with resources.open_text("repoai.resources.prompts", "default_prompts.yaml") as f:
             return yaml.safe_load(f)
 
     def _load_custom_prompts(self) -> Dict[str, Any]:
@@ -28,20 +28,19 @@ class PromptManager:
         return {}
 
     def _load_interface_prompts(self) -> Dict[str, Any]:
-        interface_prompts_path = Path(self.config_manager.project_path) / self.config_manager.REPOAI_DIR / 'interface_prompts.yaml'
-        if interface_prompts_path.exists():
-            with open(interface_prompts_path, 'r') as f:
-                return yaml.safe_load(f)
-        return {}
+        with resources.open_text("repoai.resources.prompts", "interface_prompts.yaml") as f:
+            return yaml.safe_load(f)
 
     def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
         custom_prompt = self.custom_prompts.get(task_id, {}).get(prompt_type)
         prompt_template = custom_prompt or self.default_prompts.get(task_id, {}).get(prompt_type, '')
-        return self.jinja_env.from_string(prompt_template).render(**kwargs)
+        template = self.jinja_env.from_string(prompt_template)
+        return template.render(**kwargs)
 
     def get_interface_prompt(self, task_id: str, prompt_key: str, **kwargs) -> str:
         prompt_template = self.interface_prompts.get(task_id, {}).get(prompt_key, '')
-        return self.jinja_env.from_string(prompt_template).render(**kwargs)
+        template = self.jinja_env.from_string(prompt_template)
+        return template.render(**kwargs)
 
     def set_custom_llm_prompt(self, task_id: str, prompt: str, prompt_type: str = 'system'):
         if task_id not in self.custom_prompts:
