@@ -2,6 +2,7 @@ import os
 import yaml
 from pathlib import Path
 from typing import Dict, Any
+from importlib import resources
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -13,8 +14,7 @@ class PromptManager:
         self.custom_prompts = self._load_custom_prompts()
 
     def _load_default_prompts(self) -> Dict[str, str]:
-        default_prompts_path = Path(__file__).parent / 'default_prompts.yaml'
-        with open(default_prompts_path, 'r') as f:
+        with resources.open_text("repoai.core", "default_prompts.yaml") as f:
             return yaml.safe_load(f)
 
     def _load_custom_prompts(self) -> Dict[str, str]:
