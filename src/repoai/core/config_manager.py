@@ -6,6 +6,10 @@ from importlib import resources
 import yaml
 from typing import Dict, Any
 from .prompt_manager import PromptManager
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class ConfigManager:
     CONFIG_FILE = 'repoai_config.json'
@@ -64,8 +68,15 @@ class ConfigManager:
             f.write(config_content)
 
     def set_default_global_config(self):
-        with resources.open_text("repoai.resources.config", "default_config.yaml") as f:
-            self.global_config = yaml.safe_load(f)
+        try:
+            logger.debug("Attempting to load default_config.yaml")
+            with resources.open_text("repoai.resources.config", "default_config.yaml") as f:
+                self.global_config = yaml.safe_load(f)
+            logger.debug("Successfully loaded default_config.yaml")
+        except FileNotFoundError as e:
+            logger.error(f"Error loading default_config.yaml: {e}")
+            logger.warning("Using built-in defaults.")
+            self.global_config = self._get_default_config()
         self.save_global_config()
 
     def render_template(self, template_name: str, **kwargs):
