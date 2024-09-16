@@ -3,6 +3,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 from importlib import resources
+from jinja2 import Environment, BaseLoader
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -13,6 +14,7 @@ class PromptManager:
         self.default_prompts = self._load_default_prompts()
         self.custom_prompts = self._load_custom_prompts()
         self.interface_prompts = self._load_interface_prompts()
+        self.jinja_env = Environment(loader=BaseLoader())
 
     def _load_default_prompts(self) -> Dict[str, Any]:
         with resources.open_text("repoai.core", "default_prompts.yaml") as f:
@@ -32,14 +34,14 @@ class PromptManager:
                 return yaml.safe_load(f)
         return {}
 
-    def get_llm_prompt(self, task_id: str, prompt_type: str = 'system') -> str:
+    def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
         custom_prompt = self.custom_prompts.get(task_id, {}).get(prompt_type)
-        if custom_prompt:
-            return custom_prompt
-        return self.default_prompts.get(task_id, {}).get(prompt_type, '')
+        prompt_template = custom_prompt or self.default_prompts.get(task_id, {}).get(prompt_type, '')
+        return self.jinja_env.from_string(prompt_template).render(**kwargs)
 
-    def get_interface_prompt(self, task_id: str, prompt_key: str) -> str:
-        return self.interface_prompts.get(task_id, {}).get(prompt_key, '')
+    def get_interface_prompt(self, task_id: str, prompt_key: str, **kwargs) -> str:
+        prompt_template = self.interface_prompts.get(task_id, {}).get(prompt_key, '')
+        return self.jinja_env.from_string(prompt_template).render(**kwargs)
 
     def set_custom_llm_prompt(self, task_id: str, prompt: str, prompt_type: str = 'system'):
         if task_id not in self.custom_prompts:

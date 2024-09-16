@@ -67,24 +67,42 @@ class ConfigManager:
             self.global_config = yaml.safe_load(f)
         self.save_global_config()
 
-    def get_prompt(self, task_id: str) -> str:
+    def render_template(self, template_name: str, **kwargs):
+        template = self.jinja_env.get_template(f"{template_name}.j2")
+        return template.render(**kwargs)
+
+    def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
         if self.prompt_manager:
-            return self.prompt_manager.get_prompt(task_id)
+            return self.prompt_manager.get_llm_prompt(task_id, prompt_type, **kwargs)
         return ''
 
-    def set_custom_prompt(self, task_id: str, prompt: str):
+    def get_interface_prompt(self, task_id: str, prompt_key: str, **kwargs) -> str:
         if self.prompt_manager:
-            self.prompt_manager.set_custom_prompt(task_id, prompt)
+            return self.prompt_manager.get_interface_prompt(task_id, prompt_key, **kwargs)
+        return ''
 
-    def reset_prompt(self, task_id: str):
+    def set_custom_llm_prompt(self, task_id: str, prompt: str, prompt_type: str = 'system'):
         if self.prompt_manager:
-            self.prompt_manager.reset_prompt(task_id)
+            self.prompt_manager.set_custom_llm_prompt(task_id, prompt, prompt_type)
 
-    def list_prompts(self):
+    def set_interface_prompt(self, task_id: str, prompt_key: str, prompt: str):
+        if self.prompt_manager:
+            self.prompt_manager.set_interface_prompt(task_id, prompt_key, prompt)
+
+    def reset_llm_prompt(self, task_id: str, prompt_type: str = 'system'):
+        if self.prompt_manager:
+            self.prompt_manager.reset_llm_prompt(task_id, prompt_type)
+
+    def reset_interface_prompt(self, task_id: str, prompt_key: str):
+        if self.prompt_manager:
+            self.prompt_manager.reset_interface_prompt(task_id, prompt_key)
+
+    def list_llm_prompts(self):
         if self.prompt_manager:
             return self.prompt_manager.list_prompts()
         return {}
 
-    def render_template(self, template_name: str, **kwargs):
-        template = self.jinja_env.get_template(f"{template_name}.j2")
-        return template.render(**kwargs)
+    def list_interface_prompts(self):
+        if self.prompt_manager:
+            return self.prompt_manager.list_interface_prompts()
+        return {}
