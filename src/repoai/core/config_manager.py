@@ -117,8 +117,15 @@ class ConfigManager:
 
     def update_model_config(self, config: Dict[str, Any]):
         current_config = self.get_model_config()
-        if current_config != config:
-            self.project_config['model_config'] = config
+        current_config.update(config)
+        self.project_config['model_config'] = current_config
+        self.save_project_config()
+
+    def update_model_config_item(self, key: str, value: Any):
+        current_config = self.get_model_config()
+        if current_config.get(key) != value:
+            current_config[key] = value
+            self.project_config['model_config'] = current_config
             self.save_project_config()
 
     def get_default_prompts(self) -> Dict[str, Dict[str, str]]:
