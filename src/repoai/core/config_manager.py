@@ -90,7 +90,7 @@ class ConfigManager:
         if self.prompt_manager:
             self.prompt_manager.set_custom_llm_prompt(task_id, prompt, prompt_type)
 
-    def set_interface_prompt(self, task_id: str, prompt_key: str, prompt: str):
+    def set_interface_prompt(self, task_id: str, prompt: str, prompt_key: str):
         if self.prompt_manager:
             self.prompt_manager.set_interface_prompt(task_id, prompt_key, prompt)
 
@@ -104,7 +104,7 @@ class ConfigManager:
 
     def list_llm_prompts(self):
         if self.prompt_manager:
-            return self.prompt_manager.list_prompts()
+            return self.prompt_manager.list_llm_prompts()
         return {}
 
     def list_interface_prompts(self):
@@ -129,7 +129,7 @@ class ConfigManager:
             self.save_project_config()
 
     def get_default_prompts(self) -> Dict[str, Dict[str, str]]:
-        return self.prompt_manager.get_default_prompts()
+        return self.prompt_manager.get_default_llm_prompts()
 
     def update_custom_prompts(self, prompts: Dict[str, Dict[str, str]]):
         for task_id, prompt_data in prompts.items():

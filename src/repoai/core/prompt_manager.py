@@ -1,12 +1,13 @@
 from ..defaults.default_llm_prompts import DEFAULT_LLM_PROMPTS
 from ..defaults.default_interface_prompts import DEFAULT_INTERFACE_PROMPTS
+from ..core.config_manager import ConfigManager
 from jinja2 import Environment, BaseLoader
 from typing import Dict, Any
 import yaml
 from pathlib import Path
 
 class PromptManager:
-    def __init__(self, config_manager):
+    def __init__(self, config_manager: ConfigManager):
         self.config_manager = config_manager
         self.default_llm_prompts = DEFAULT_LLM_PROMPTS
         self.custom_llm_prompts = self._load_custom_llm_prompts()
@@ -43,6 +44,11 @@ class PromptManager:
         self.custom_llm_prompts[task_id][prompt_type] = prompt
         self._save_custom_llm_prompts()
 
+    def set_interface_prompt(self, task_id: str, prompt: str, prompt_key: str):
+        if task_id not in self.interface_prompts:
+            self.interface_prompts[task_id] = {}
+        self.interface_prompts[task_id][prompt_key] = prompt
+
     def _save_custom_llm_prompts(self):
         custom_prompts_path = Path(self.config_manager.project_path) / self.config_manager.REPOAI_DIR / 'custom_llm_prompts.yaml'
         with open(custom_prompts_path, 'w') as f:
@@ -54,6 +60,10 @@ class PromptManager:
             if not self.custom_llm_prompts[task_id]:
                 del self.custom_llm_prompts[task_id]
             self._save_custom_llm_prompts()
+
+    def reset_interface_prompt(self, task_id: str, prompt_key: str):
+        if task_id in self.interface_prompts and prompt_key in self.interface_prompts[task_id]:
+            del self.interface_prompts[task_id][prompt_key]
 
     def list_llm_prompts(self) -> Dict[str, Dict[str, Any]]:
         all_prompts = {}
