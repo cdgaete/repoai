@@ -55,9 +55,11 @@ class ConfigManager:
             self.project_config = {}
         self.prompt_manager = PromptManager(self)
 
-    def save_project_config(self):
+    def save_project_config(self, project_path: Path = None):
+        if project_path:
+            self.project_path = project_path
         if not self.project_path:
-            raise ValueError("Project path not set. Call load_project_config first.")
+            raise ValueError("Project path not set. Call load_project_config first or provide a project_path.")
         config_file_path = self.project_path / self.REPOAI_DIR / self.CONFIG_FILE
         config_file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_file_path, 'w') as f:

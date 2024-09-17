@@ -1,4 +1,5 @@
 import argparse
+import yaml
 import json
 from pathlib import Path
 from repoai import initialize, ProjectManager
@@ -11,8 +12,6 @@ from repoai.utils.logger import get_logger
 config = initialize()
 
 logger = get_logger(__name__)
-
-
 
 def main():
     parser = argparse.ArgumentParser(description="RepoAI - AI-assisted repository content creation")
@@ -36,8 +35,15 @@ def load_model_config(model_config_path):
     model_config_path = Path(model_config_path)
     if not model_config_path.exists():
         raise FileNotFoundError(f"Model config file not found: {model_config_path}")
+    
     with open(model_config_path, 'r') as f:
-        model_config = json.load(f)
+        if model_config_path.suffix.lower() in ['.yml', '.yaml']:
+            model_config = yaml.safe_load(f)
+        elif model_config_path.suffix.lower() == '.json':
+            model_config = json.load(f)
+        else:
+            raise ValueError(f"Unsupported file format: {model_config_path.suffix}")
+    
     return model_config
 
 def handle_project_actions(args):
@@ -52,7 +58,6 @@ def handle_project_actions(args):
         project_manager = ProjectManager(args.project_path, create_if_not_exists=True, error_if_exists=False)
         generation_interface = ProjectGenerationInterface(project_manager, model_config)
         generation_interface.run()
-        # Transition to modification interface
         logger.info("\nProject created successfully. Transitioning to modification mode...\n")
         modification_interface = ProjectModificationInterface(project_manager, model_config)
         modification_interface.run()
@@ -61,7 +66,6 @@ def handle_project_actions(args):
         project_manager = ProjectManager(args.project_path, create_if_not_exists=False, error_if_exists=False)
         modification_interface = ProjectModificationInterface(project_manager, model_config)
         modification_interface.run()
-
 
 def handle_init_action(args):
     assert args.project_path is not None, "Project path must be specified\nUsage: repoai <action> --project_path <path_to_project>"
@@ -73,25 +77,19 @@ def handle_init_action(args):
     logger.info("  .repoai/.repoaiignore")
     logger.info("An initial Git commit was made.")
 
-
 def handle_report_action(args):
     assert args.project_path is not None, "Project path must be specified\nUsage: repoai <action> --project_path <path_to_project>"
 
     project_manager = ProjectManager(args.project_path, create_if_not_exists=False, error_if_exists=False)
     markdown_service = MarkdownService(project_manager.project_path, project_manager.config.get('repoai_ignore_file'))
-    # Generate the report
     report_content = markdown_service.generate_markdown_compilation("")
-    # Determine the output location
     output_dir = Path(args.output) if args.output else Path.cwd()
     output_file = output_dir / f"{project_manager.project_name}_report.md"
-    # Ensure the output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
-    # Write the report to file
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(report_content)
     logger.info(f"Project report for '{project_manager.project_name}' generated successfully.")
     logger.info(f"Report saved to: {output_file}")
-
 
 def handle_plugin_action(args):
     if args.model_config:
