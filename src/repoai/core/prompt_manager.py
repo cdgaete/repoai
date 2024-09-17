@@ -1,13 +1,12 @@
 from ..defaults.default_llm_prompts import DEFAULT_LLM_PROMPTS
 from ..defaults.default_interface_prompts import DEFAULT_INTERFACE_PROMPTS
-from ..core.config_manager import ConfigManager
 from jinja2 import Environment, BaseLoader
 from typing import Dict, Any
 import yaml
 from pathlib import Path
 
 class PromptManager:
-    def __init__(self, config_manager: ConfigManager):
+    def __init__(self, config_manager):
         self.config_manager = config_manager
         self.default_llm_prompts = DEFAULT_LLM_PROMPTS
         self.custom_llm_prompts = self._load_custom_llm_prompts()
