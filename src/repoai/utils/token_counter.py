@@ -1,4 +1,4 @@
-import json
+import yaml
 from typing import Dict, List, Any
 from pathlib import Path
 from litellm import token_counter, cost_per_token
@@ -20,14 +20,14 @@ class TokenCounter:
         global_usage_file = Path(self.config.get('global_token_usage_file'))
         if global_usage_file.exists():
             with open(global_usage_file, 'r') as f:
-                return json.load(f)
+                return yaml.safe_load(f)
         return {}
 
     def _load_project_usage(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
         project_usage_file = self.project_path / self.config.get('project_token_usage_file')
         if project_usage_file.exists():
             with open(project_usage_file, 'r') as f:
-                return json.load(f)
+                return yaml.safe_load(f)
         return {}
 
     def _initialize_interaction_usage(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
@@ -36,12 +36,12 @@ class TokenCounter:
     def _save_global_usage(self):
         global_usage_file = Path(self.config.get('global_token_usage_file'))
         with open(global_usage_file, 'w') as f:
-            json.dump(self.global_usage, f, indent=2)
+            yaml.dump(self.global_usage, f, default_flow_style=False)
 
     def _save_project_usage(self):
         project_usage_file = self.project_path / self.config.get('project_token_usage_file')
         with open(project_usage_file, 'w') as f:
-            json.dump(self.project_usage, f, indent=2)
+            yaml.dump(self.project_usage, f, default_flow_style=False)
 
     def count_tokens(self, model: str, messages: List[Dict[str, str]]) -> int:
         return token_counter(model=model, messages=messages)
@@ -63,7 +63,6 @@ class TokenCounter:
             usage[provider][model]['output_tokens'] += output_tokens
             usage[provider][model]['total_tokens'] += total_tokens
 
-        # Update global usage
         try:
             prompt_cost, completion_cost = cost_per_token(model, input_tokens, output_tokens)
         except Exception as e:

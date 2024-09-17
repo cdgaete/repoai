@@ -49,13 +49,15 @@ def load_model_config(model_config_path):
 def handle_project_actions(args):
     assert args.project_path is not None, "Project path must be specified\nUsage: repoai <action> --project_path <path_to_project>"
 
+    project_manager = ProjectManager(args.project_path, create_if_not_exists=True, error_if_exists=False)
+    
     if args.model_config:
         model_config = load_model_config(args.model_config)
+        project_manager.config.update_model_config(model_config)
     else:
-        model_config = {}
+        model_config = project_manager.config.get_model_config()
         
     if args.action == 'create':
-        project_manager = ProjectManager(args.project_path, create_if_not_exists=True, error_if_exists=False)
         generation_interface = ProjectGenerationInterface(project_manager, model_config)
         generation_interface.run()
         logger.info("\nProject created successfully. Transitioning to modification mode...\n")
@@ -63,7 +65,6 @@ def handle_project_actions(args):
         modification_interface.run()
     
     elif args.action == 'edit':        
-        project_manager = ProjectManager(args.project_path, create_if_not_exists=False, error_if_exists=False)
         modification_interface = ProjectModificationInterface(project_manager, model_config)
         modification_interface.run()
 
