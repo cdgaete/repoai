@@ -79,6 +79,22 @@ class ConfigManager:
             self.global_config = self._get_default_config()
         self.save_global_config()
 
+    def _get_default_config(self) -> Dict[str, Any]:
+        return {
+            "default_model": "anthropic/claude-3-5-sonnet-20240620",
+            "log_level": "INFO",
+            "log_file": str(self.user_dir / "repoai.log"),
+            "max_log_file_size": 10485760,  # 10 MB
+            "log_backup_count": 5,
+            "max_commit_history": 10,
+            "docker_compose_file": "docker-compose.yml",
+            "global_token_usage_file": str(self.user_dir / "global_token_usage.json"),
+            "project_token_usage_file": ".repoai/token_usage.json",
+            "repoai_ignore_file": ".repoai/.repoaiignore",
+            "prompt_cache_threshold": 20000,
+            "plugin_dir": str(self.user_dir / "plugins"),
+        }
+
     def render_template(self, template_name: str, **kwargs):
         template = self.jinja_env.get_template(f"{template_name}.j2")
         return template.render(**kwargs)
