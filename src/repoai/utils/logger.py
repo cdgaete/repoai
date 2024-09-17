@@ -6,7 +6,7 @@ from pathlib import Path
 
 def setup_logger(config):
     logger = logging.getLogger('repoai')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     if not logger.handlers:
         # Console handler

@@ -17,7 +17,7 @@ class PromptManager:
         self.jinja_env = Environment(loader=FileSystemLoader(str(Path(__file__).parent.parent / 'resources' / 'prompts')))
 
     def _load_default_prompts(self) -> Dict[str, Any]:
-        with resources.open_text("repoai.resources.prompts", "default_prompts.yaml") as f:
+        with resources.files("repoai.resources.prompts", "default_prompts.yaml") as f:
             return yaml.safe_load(f)
 
     def _load_custom_prompts(self) -> Dict[str, Any]:
@@ -28,7 +28,7 @@ class PromptManager:
         return {}
 
     def _load_interface_prompts(self) -> Dict[str, Any]:
-        with resources.open_text("repoai.resources.prompts", "interface_prompts.yaml") as f:
+        with resources.files("repoai.resources.prompts", "interface_prompts.yaml") as f:
             return yaml.safe_load(f)
 
     def get_default_prompts(self) -> Dict[str, Dict[str, str]]:
