@@ -1,3 +1,1 @@
-include src/repoai/resources/config/*.yaml
-include src/repoai/resources/prompts/*.yaml
-include src/repoai/resources/templates/*.j2
+include src/repoai/templates/*.j2
