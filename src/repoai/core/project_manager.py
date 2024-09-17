@@ -252,3 +252,23 @@ class ProjectManager:
 
     def list_interface_prompts(self):
         return self.config.list_interface_prompts()
+
+    def verify_and_correct_file_path(self, file_path: str) -> str:
+        full_path = self.project_path / file_path
+        
+        if full_path.exists():
+            return file_path
+        
+        parts = Path(file_path).parts
+        for i in range(len(parts), 0, -1):
+            partial_path = Path(*parts[:i])
+            if (self.project_path / partial_path).exists():
+                for root, dirs, files in os.walk(self.project_path / partial_path):
+                    for name in files + dirs:
+                        if name == parts[-1]:
+                            corrected_path = str(Path(root) / name).replace(str(self.project_path), '').lstrip('/')
+                            logger.info(f"Corrected file path from '{file_path}' to '{corrected_path}'")
+                            return corrected_path
+        
+        logger.warning(f"Could not find a valid path for '{file_path}'")
+        return file_path

@@ -69,7 +69,7 @@ class ProjectModificationWorkflow(BaseWorkflow):
 
         for mod in modifications:
             operation = mod['operation']
-            file_path = mod['file_path']
+            file_path = self.project_manager.verify_and_correct_file_path(mod['file_path'])
 
             if operation == 'create':
                 operations.append({
