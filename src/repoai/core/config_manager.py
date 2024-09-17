@@ -1,15 +1,13 @@
-import json
+import yaml
 from pathlib import Path
 import appdirs
 from jinja2 import Environment, FileSystemLoader
-from importlib import resources
-import yaml
 from typing import Dict, Any
 from .prompt_manager import PromptManager
-
+from ..defaults.default_config import DEFAULT_CONFIG
 
 class ConfigManager:
-    CONFIG_FILE = 'repoai_config.json'
+    CONFIG_FILE = 'repoai_config.yaml'
     REPOAI_DIR = ".repoai"
 
     def __init__(self):
@@ -19,14 +17,15 @@ class ConfigManager:
         self.user_dir = Path(appdirs.user_data_dir("repoai"))
         self.load_global_config()
         self.prompt_manager = None
-        self.jinja_env = Environment(loader=FileSystemLoader(str(Path(__file__).parent.parent / 'resources' / 'templates')))
+        self.jinja_env = Environment(loader=FileSystemLoader(str(Path(__file__).parent.parent / 'templates')))
+        self.project_path = None
     
     def load_global_config(self):
         config_file = self.config_dir / self.CONFIG_FILE
 
         if config_file.exists():
             with open(config_file, 'r') as f:
-                self.global_config = json.load(f)
+                self.global_config = yaml.safe_load(f)
         else:
             self.set_default_global_config()
     
@@ -34,7 +33,7 @@ class ConfigManager:
         self.config_dir.mkdir(parents=True, exist_ok=True)
         config_file = self.config_dir / self.CONFIG_FILE
         with open(config_file, 'w') as f:
-            json.dump(self.global_config, f, indent=2)
+            yaml.dump(self.global_config, f)
 
     def get(self, key, default=None):
         return self.project_config.get(key, self.global_config.get(key, default))
@@ -46,47 +45,30 @@ class ConfigManager:
         else:
             self.project_config[key] = value
 
-    def load_project_config(self, project_path:Path):
+    def load_project_config(self, project_path: Path):
         self.project_path = project_path
         config_file_path = project_path / self.REPOAI_DIR / self.CONFIG_FILE
         if config_file_path.exists():
             with open(config_file_path, 'r') as f:
-                self.project_config = json.load(f)
+                self.project_config = yaml.safe_load(f)
         else:
             self.project_config = {}
         self.prompt_manager = PromptManager(self)
 
-    def save_project_config(self, project_path:Path):
-        config_content = json.dumps(self.project_config, indent=2)
-        config_file_path = project_path / self.REPOAI_DIR / self.CONFIG_FILE
-
+    def save_project_config(self):
+        if not self.project_path:
+            raise ValueError("Project path not set. Call load_project_config first.")
+        config_file_path = self.project_path / self.REPOAI_DIR / self.CONFIG_FILE
         config_file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_file_path, 'w') as f:
-            f.write(config_content)
+            yaml.dump(self.project_config, f)
 
     def set_default_global_config(self):
-        try:
-            with resources.files("repoai.resources.config", "default_config.yaml") as f:
-                self.global_config = yaml.safe_load(f)
-        except FileNotFoundError as e:
-            self.global_config = self._get_default_config()
+        self.global_config = DEFAULT_CONFIG.copy()
+        self.global_config['log_file'] = str(self.user_dir / "repoai.log")
+        self.global_config['global_token_usage_file'] = str(self.user_dir / "global_token_usage.yaml")
+        self.global_config['plugin_dir'] = str(self.user_dir / "plugins")
         self.save_global_config()
-
-    def _get_default_config(self) -> Dict[str, Any]:
-        return {
-            "default_model": "anthropic/claude-3-5-sonnet-20240620",
-            "log_level": "INFO",
-            "log_file": str(self.user_dir / "repoai.log"),
-            "max_log_file_size": 10485760,  # 10 MB
-            "log_backup_count": 5,
-            "max_commit_history": 10,
-            "docker_compose_file": "docker-compose.yml",
-            "global_token_usage_file": str(self.user_dir / "global_token_usage.json"),
-            "project_token_usage_file": ".repoai/token_usage.json",
-            "repoai_ignore_file": ".repoai/.repoaiignore",
-            "prompt_cache_threshold": 20000,
-            "plugin_dir": str(self.user_dir / "plugins"),
-        }
 
     def render_template(self, template_name: str, **kwargs):
         template = self.jinja_env.get_template(f"{template_name}.j2")
@@ -133,7 +115,7 @@ class ConfigManager:
 
     def update_model_config(self, config: Dict[str, Any]):
         self.project_config['model_config'] = config
-        self.save_project_config(self.project_path)
+        self.save_project_config()
 
     def get_default_prompts(self) -> Dict[str, Dict[str, str]]:
         return self.prompt_manager.get_default_prompts()
@@ -142,4 +124,4 @@ class ConfigManager:
         for task_id, prompt_data in prompts.items():
             self.prompt_manager.set_custom_llm_prompt(task_id, prompt_data['system'], 'system')
             self.prompt_manager.set_custom_llm_prompt(task_id, prompt_data['user'], 'user')
-        self.save_project_config(self.project_path)
+        self.save_project_config()
