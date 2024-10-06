@@ -55,6 +55,10 @@ class ConfigManager:
             self.project_config = {}
         self.prompt_manager = PromptManager(self)
 
+    def update_project_config(self, config: Dict[str, Any]):
+        self.project_config.update(config)
+        self.save_project_config()
+
     def save_project_config(self, project_path: Path = None):
         if project_path:
             self.project_path = project_path
@@ -136,3 +140,6 @@ class ConfigManager:
             self.prompt_manager.set_custom_llm_prompt(task_id, prompt_data['system'], 'system')
             self.prompt_manager.set_custom_llm_prompt(task_id, prompt_data['user'], 'user')
         self.save_project_config()
+
+    def get_custom_prompts(self) -> Dict[str, Dict[str, str]]:
+        return self.prompt_manager.get_llm_prompts()

@@ -43,6 +43,15 @@ class PromptManager:
         self.custom_llm_prompts[task_id][prompt_type] = prompt
         self._save_custom_llm_prompts()
 
+    def get_llm_prompts(self) -> Dict[str, Dict[str, str]]:
+        all_prompts = {}
+        for task_id in set(list(self.default_llm_prompts.keys()) + list(self.custom_llm_prompts.keys())):
+            all_prompts[task_id] = {
+                'system': self.get_llm_prompt(task_id, 'system'),
+                'user': self.get_llm_prompt(task_id, 'user')
+            }
+        return all_prompts
+
     def set_interface_prompt(self, task_id: str, prompt: str, prompt_key: str):
         if task_id not in self.interface_prompts:
             self.interface_prompts[task_id] = {}
