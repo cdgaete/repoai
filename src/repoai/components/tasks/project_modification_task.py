@@ -29,7 +29,7 @@ class ProjectModificationTask(BaseTask):
             system_message = self.llm_service.config.get_llm_prompt(task_id='project_modification_task', prompt_type='system')
             messages = [{"role": "system", "content": system_message}]
             project_report = context.get('project_report', '')
-            text_message = f"<ProjectReport>\n{project_report}\n</ProjectReport>\n\n{user_input}\n\n"
+            text_message = f"\nContext:\n\n{project_report}\n\nRequest:\n\n{user_input}\n\n"
             if file_contexts:
                 text_message += "Additional information for context:\n"
                 for file_context in file_contexts:
