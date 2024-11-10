@@ -1,4 +1,4 @@
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 from .core.project_manager import ProjectManager
 from .core.config_manager import ConfigManager
