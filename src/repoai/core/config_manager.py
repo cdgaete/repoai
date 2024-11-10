@@ -82,7 +82,7 @@ class ConfigManager:
 
     def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
         if self.prompt_manager:
-            return self.prompt_manager.get_llm_prompt(task_id=task_id, prompt_type=prompt_type, **kwargs)
+            return self.prompt_manager.get_llm_prompt_rendered(task_id=task_id, prompt_type=prompt_type, **kwargs)
         return ''
 
     def get_interface_prompt(self, task_id: str, prompt_key: str, **kwargs) -> str:
@@ -142,4 +142,4 @@ class ConfigManager:
         self.save_project_config()
 
     def get_custom_prompts(self) -> Dict[str, Dict[str, str]]:
-        return self.prompt_manager.get_llm_prompts()
+        return self.prompt_manager.get_llm_raw_prompts()

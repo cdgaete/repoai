@@ -23,15 +23,21 @@ class PromptManager:
     def get_default_llm_prompts(self) -> Dict[str, Dict[str, str]]:
         return self.default_llm_prompts
 
-    def get_llm_prompt(self, task_id: str, prompt_type: str = 'system', **kwargs) -> str:
+    def get_llm_raw_prompt(self, task_id: str, prompt_type: str = 'system') -> str:
         custom_prompt = self.custom_llm_prompts.get(task_id, {}).get(prompt_type)
         if custom_prompt:
             return custom_prompt
-        
         prompt_template = self.default_llm_prompts.get(task_id, {}).get(prompt_type, '')
-        template = self.jinja_env.from_string(prompt_template)
+        return prompt_template
+    
+    def render_prompt(self, raw_prompt: str, **kwargs) -> str:
+        template = self.jinja_env.from_string(raw_prompt)
         return template.render(**kwargs)
-
+    
+    def get_llm_prompt_rendered(self, task_id: str, prompt_type: str = 'system', **kwargs):
+        prompt = self.get_llm_raw_prompt(task_id, prompt_type)
+        return self.render_prompt(prompt, **kwargs)
+        
     def get_interface_prompt(self, task_id: str, prompt_key: str, **kwargs) -> str:
         prompt_template = self.interface_prompts.get(task_id, {}).get(prompt_key, '')
         template = self.jinja_env.from_string(prompt_template)
@@ -43,12 +49,12 @@ class PromptManager:
         self.custom_llm_prompts[task_id][prompt_type] = prompt
         self._save_custom_llm_prompts()
 
-    def get_llm_prompts(self) -> Dict[str, Dict[str, str]]:
+    def get_llm_raw_prompts(self) -> Dict[str, Dict[str, str]]:
         all_prompts = {}
         for task_id in set(list(self.default_llm_prompts.keys()) + list(self.custom_llm_prompts.keys())):
             all_prompts[task_id] = {
-                'system': self.get_llm_prompt(task_id, 'system'),
-                'user': self.get_llm_prompt(task_id, 'user')
+                'system': self.get_llm_raw_prompt(task_id, 'system'),
+                'user': self.get_llm_raw_prompt(task_id, 'user')
             }
         return all_prompts
 
