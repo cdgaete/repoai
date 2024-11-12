@@ -27,7 +27,8 @@ class MarkdownService:
         Add file content to the repo content for the project.
         """
         logger.debug(f"Adding file content for project: {self.project_name}")
-        self.repo_content[file_path] = content
+        assert file_path in self.repo_content['files']
+        self.repo_content['content'][file_path] = content
 
     def generate_markdown_report(self, project_description: str, include_line_numbers: bool = False) -> str:
         """
