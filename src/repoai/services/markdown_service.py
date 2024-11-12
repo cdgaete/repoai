@@ -22,7 +22,7 @@ class MarkdownService:
         logger.debug(f"Generating repo content for project: {self.project_name}")
         self.repo_content = self.file_manager.generate_repo_content(files)
     
-    def add_file_content(self, file_path: str, content: Dict[str, Any]):
+    def add_file_content(self, file_path: str, content: str) -> None:
         """
         Add file content to the repo content for the project.
         """

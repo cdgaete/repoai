@@ -86,6 +86,9 @@ def calculate_printable_ratio(data: bytes) -> float:
     return sum(byte in printable for byte in data) / len(data)
 
 def is_text_file(filepath: Union[str, Path], sample_size: int = 1024) -> bool:
+    # omit known non-text files
+    if Path(filepath).suffix.lower() in [".pdf", ".docx", ".pptx", ".doc", ".ppt", ".xls", ".xlsx", ".odt"]:
+        return False
     raw_data = read_file_sample(filepath, sample_size)
     return is_text_content(raw_data)
     
