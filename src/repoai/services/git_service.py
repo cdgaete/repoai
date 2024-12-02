@@ -180,14 +180,7 @@ class GitService:
     def commit(self, message: str):
         """Commit changes with the given message"""
         try:
-            if not self.repo:
-                raise ValueError("Git repository not initialized")
-                
-            # Add all changes
-            self.repo.git.add('.')
-            
-            # Commit changes
-            self.repo.index.commit(message)
+            self.commit_all(message)
         except Exception as e:
             logger.error(f"Error committing changes: {str(e)}")
             raise
