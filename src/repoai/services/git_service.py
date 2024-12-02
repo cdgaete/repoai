@@ -222,7 +222,7 @@ class GitService:
 
             # Compare local and remote branches
             unpushed_commits = list(self.repo.iter_commits(
-                f'{current_branch}..{remote_branch}'
+                f'{remote_branch}..{current_branch}'
             ))
 
             logger.debug(f"Unpushed commits: {unpushed_commits}")
