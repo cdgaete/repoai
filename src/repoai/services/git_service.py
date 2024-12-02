@@ -19,10 +19,6 @@ class GitService:
         except InvalidGitRepositoryError:
             logger.debug("Project directory is not a valid Git repository. Initializing...")
             return Repo.init(self.project_path)
-        
-
-
-        return Repo(self.project_path)
 
     def stage_operation(self, file_path: str, operation: str):
         if operation in ['edit_file', 'delete_file', 'move_file']:
@@ -233,6 +229,8 @@ class GitService:
             unpushed_commits = list(self.repo.iter_commits(
                 f'{current_branch}..{remote_branch}'
             ))
+
+            logger.debug(f"Unpushed commits: {unpushed_commits}")
             
             # Format commits into a list of dictionaries
             return [
