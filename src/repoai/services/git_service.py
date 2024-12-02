@@ -108,3 +108,108 @@ class GitService:
         changed = [item.a_path for item in self.repo.index.diff(None)]
         untracked = self.repo.untracked_files
         return changed + untracked
+    
+    def get_status(self) -> Dict[str, List[str]]:
+        """Get the current Git status of the repository"""
+        try:
+            status = {
+                'untracked': [],
+                'modified': [],
+                'deleted': [],
+                'staged': []
+            }
+            
+            if not self.repo:
+                return status
+
+            # Get repository status
+            repo_status = self.repo.git.status('--porcelain').split('\n')
+            
+            for item in repo_status:
+                if not item:
+                    continue
+                    
+                status_code = item[:2]
+                file_path = item[3:]
+                
+                if status_code.startswith('??'):
+                    status['untracked'].append(file_path)
+                elif status_code.startswith(' M'):
+                    status['modified'].append(file_path)
+                elif status_code.startswith(' D'):
+                    status['deleted'].append(file_path)
+                elif status_code.startswith('A ') or status_code.startswith('M '):
+                    status['staged'].append(file_path)
+                    
+            return status
+        except Exception as e:
+            logger.error(f"Error getting git status: {str(e)}")
+            raise
+
+    def get_uncommitted_changes(self) -> List[Dict[str, str]]:
+        """Get list of files with uncommitted changes"""
+        try:
+            changes = []
+            if not self.repo:
+                return changes
+
+            # Get diff of working tree
+            diff_index = self.repo.index.diff(None)
+            
+            # Add modified files
+            for diff in diff_index:
+                change_type = diff.change_type
+                if change_type in ['M', 'A', 'D']:
+                    changes.append({
+                        'path': diff.a_path,
+                        'type': change_type
+                    })
+
+            # Add untracked files
+            for untracked_file in self.repo.untracked_files:
+                changes.append({
+                    'path': untracked_file,
+                    'type': 'U'  # Untracked
+                })
+
+            return changes
+        except Exception as e:
+            logger.error(f"Error getting uncommitted changes: {str(e)}")
+            raise
+
+    def commit(self, message: str):
+        """Commit changes with the given message"""
+        try:
+            if not self.repo:
+                raise ValueError("Git repository not initialized")
+                
+            # Add all changes
+            self.repo.git.add('.')
+            
+            # Commit changes
+            self.repo.index.commit(message)
+        except Exception as e:
+            logger.error(f"Error committing changes: {str(e)}")
+            raise
+
+    def pull(self):
+        """Pull changes from remote repository"""
+        try:
+            if not self.repo:
+                raise ValueError("Git repository not initialized")
+                
+            self.repo.remotes.origin.pull()
+        except Exception as e:
+            logger.error(f"Error pulling changes: {str(e)}")
+            raise
+
+    def push(self):
+        """Push changes to remote repository"""
+        try:
+            if not self.repo:
+                raise ValueError("Git repository not initialized")
+                
+            self.repo.remotes.origin.push()
+        except Exception as e:
+            logger.error(f"Error pushing changes: {str(e)}")
+            raise
