@@ -218,13 +218,8 @@ class GitService:
             current_branch = self.repo.active_branch
             
             # Get the remote tracking branch
-            try:
-                remote_branch = current_branch.tracking_branch()
-                if not remote_branch:
-                    return []
-            except TypeError:
-                return []
-            
+            remote_branch = current_branch.tracking_branch()
+
             # Compare local and remote branches
             unpushed_commits = list(self.repo.iter_commits(
                 f'{current_branch}..{remote_branch}'
@@ -242,10 +237,6 @@ class GitService:
                 } 
                 for commit in unpushed_commits
             ]
-        
-        except InvalidGitRepositoryError:
-            print("Error: Not a valid Git repository")
-            return []
         except Exception as e:
-            print(f"An error occurred: {e}")
-            return []
+            logger.error(f"Error getting unpushed commits: {str(e)}")
+            raise
