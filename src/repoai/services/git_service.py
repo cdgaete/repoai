@@ -206,3 +206,48 @@ class GitService:
         except Exception as e:
             logger.error(f"Error pushing changes: {str(e)}")
             raise
+
+    def get_unpushed_commits(self):
+        """
+        Identify unpushed commits in a Git repository.
+        
+        Args:
+            repo_path (str): Path to the Git repository. Defaults to current directory.
+        
+        Returns:
+            list: Unpushed commit hashes and messages
+        """
+        try:
+            # Get the current branch
+            current_branch = self.repo.active_branch
+            
+            # Get the remote tracking branch
+            try:
+                remote_branch = current_branch.tracking_branch()
+                if not remote_branch:
+                    return []
+            except TypeError:
+                return []
+            
+            # Compare local and remote branches
+            unpushed_commits = list(self.repo.iter_commits(
+                f'{current_branch}..{remote_branch}'
+            ))
+            
+            # Format commits into a list of dictionaries
+            return [
+                {
+                    'hash': commit.hexsha, 
+                    'message': commit.message.strip(),
+                    'author': commit.author.name,
+                    'date': commit.committed_datetime.isoformat()
+                } 
+                for commit in unpushed_commits
+            ]
+        
+        except InvalidGitRepositoryError:
+            print("Error: Not a valid Git repository")
+            return []
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return []
